@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from scipy.fftpack import fft
 from scipy.io import wavfile
+import numpy as np
 import math
 import os
 
@@ -29,7 +30,7 @@ class WavData:
         """
         return WavData(
             fs=self.fs,
-            data=self.data[math.ceil(start * self.fs):math.floor(end * self.fs)],
+            data=self.data[math.ceil(start*self.fs):math.floor(end*self.fs)],
         )
 
     def fft(self):
@@ -39,12 +40,8 @@ class WavData:
 
 
 def load_labeled_data(data_folder='data'):
-    """Returns a list of labeled WavData in the format:
-
-        In:  load_labeled_data(...)
-        Out: [(label1, WavData1), (label1, WavData2), (label2, WavData3)]
-
-        Given a data_folder with the structure:
+    """Returns a list of labels and examples given a data_folder with the
+       structure:
 
             data_folder
                 label1
@@ -56,12 +53,22 @@ def load_labeled_data(data_folder='data'):
         List order may not be consistent between runs.
     """
     label_folders = os.listdir(data_folder)
-    
-    labeled_wavs = []
+    m = map_label_to_one_hot(label_folders)
+
+    labeled_wavs = {}
 
     for label in label_folders:
         files = os.listdir(os.path.join(data_folder, label))
         files = [os.path.join(data_folder, label, x) for x in files]
-        labeled_wavs += [(label, WavData(f)) for f in files]
+        labeled_wavs[label] = (m[label], [WavData(f) for f in files])
 
     return labeled_wavs
+
+
+def map_label_to_one_hot(labels):
+    m = {}
+
+    for i in range(len(labels)):
+        m[labels[i]] = np.array([0] * (len(labels) - i - 1) + [1] + [0] * i)
+
+    return m
