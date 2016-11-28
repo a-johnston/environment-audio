@@ -1,1 +1,9 @@
+pip
+numpy>=1.5.0
 scipy
+# Install Tensorflow
+#   It might make sense to install from source
+# tensorflow for python3.5, cpu only
+https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.11.0-cp35-cp35m-linux_x86_64.whl
+# tensorflow for python3.5, cpu + gpu
+# https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-0.11.0-cp35-cp35m-linux_x86_64.whl
