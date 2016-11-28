@@ -69,6 +69,8 @@ def map_label_to_one_hot(labels):
     m = {}
 
     for i in range(len(labels)):
-        m[labels[i]] = np.array([0] * (len(labels) - i - 1) + [1] + [0] * i)
+        onehot = np.zeros(len(labels))
+        onehot[i] = 1
+        m[labels[i]] = onehot
 
     return m
