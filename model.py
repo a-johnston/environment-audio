@@ -5,8 +5,11 @@ import tensorflow as tf
 class Model:
     """Base model which can train and evaluate accuracy
     """
-    train = None
-    accuracy = None
+    def train(self, data):
+        raise NotImplemented
+    
+    def accuracy(self, data):
+        raise NotImplemented
 
 
 def weight_variable(shape):

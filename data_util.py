@@ -77,6 +77,8 @@ class Dataset:
         self.testing = []
 
         for label in self.data:
+            random.shuffle(self.data[label])
+
             y = self.data[label][0]
             l = self.data[label][1]
 
