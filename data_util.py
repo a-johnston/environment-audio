@@ -3,6 +3,7 @@ from scipy.fftpack import fft
 from scipy.io import wavfile
 import numpy as np
 import math
+import random
 import os
 
 
@@ -59,7 +60,7 @@ class WavData:
 
 
 class Dataset:
-    """Object for loading and 
+    """Object for loading and accessing a specified dataset
     """
 
     def __init__(self, data_folder='data', split=0.9, sample_length=5.0):
@@ -84,6 +85,9 @@ class Dataset:
 
             self.training += [(x, y) for x in split1]
             self.testing += [(x, y) for x in split2]
+
+    def shuffle(self):
+        random.shuffle(self.training)
 
 
 def _load_labeled_data(data_folder, sample_length):
