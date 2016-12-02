@@ -22,7 +22,7 @@ class Model(metaclass=ModelMeta):
        The dataset is passed as it provides the shapes of examples and labels
        as well as 
     """
-    session = tf.Session()
+    session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=16))
 
     x = None
     y = None
