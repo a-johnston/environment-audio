@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+import sys
+from model import *
+from dataset import *
 
 
 def run(model, dataset, iterations=50000, print_every=1000, target_accuracy=None):
@@ -22,3 +25,24 @@ def run(model, dataset, iterations=50000, print_every=1000, target_accuracy=None
     accuracy = model.accuracy(test_data[0], test_data[1])
     print('')
     print('Training complete.\t\t\t\tAccuracy: %6.2f%%' % (accuracy * 100))
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print('No model specified.')
+        print('Options: ' + ', '.join(Model.models.keys()))
+        sys.exit(1)
+
+    model = sys.argv[1]
+    if model not in Model.models:
+        print('Unknown model ' + model +'.')
+        print('Options: ' + ', '.join(Model.models.keys()))
+        sys.exit(1)
+
+    if len(sys.argv) > 2 and sys.argv[2] == 'mock':
+        dataset = Dataset.mock()
+    else:
+        dataset = Dataset.load_wavs()
+    model = Model.models[model](dataset)
+
+    run(model, dataset)
