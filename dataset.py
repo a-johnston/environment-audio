@@ -77,11 +77,11 @@ class Dataset:
         training = []
         testing = []
 
-        for label in self.data:
-            random.shuffle(self.data[label])
+        for label in data:
+            y = data[label][0]
+            l = data[label][1]
 
-            y = self.data[label][0]
-            l = self.data[label][1]
+            random.shuffle(l)
 
             split1 = l[:math.floor(len(l) * split)]
             split2 = l[math.floor(len(l) * split):]
@@ -116,11 +116,29 @@ class Dataset:
         self._testing = testing
 
     def training(self):
+        """Shuffles the training data and returns [[examples], [labels]] where
+           examples[i] corresponds to labels[i].
+        """
         random.shuffle(self._training)
         return np.array(list(zip(*self._training)))
 
     def testing(self):
+        """Returns the testing data as [[examples], [labels]] where examples[i]
+           corresponds to labels[i].
+        """
         return np.array(list(zip(*self._testing)))
+
+    def x_shape(self):
+        """Returns the shape of an example in this dataset. For example, the
+           test.wav example with 2 second samples has shape (88200,).
+        """
+        return self._training[0][0].shape
+
+    def y_shape(self):
+        """Returns the shape of a label in this dataset. For example, three
+           unique labels mapped to a one-hot vector would yield (3,).
+        """
+        return self._training[0][1].shape
 
 
 def _load_labeled_data(data_folder, sample_length):
@@ -145,6 +163,7 @@ def _load_labeled_data(data_folder, sample_length):
         files = os.listdir(os.path.join(data_folder, label))
         files = [os.path.join(data_folder, label, x) for x in files]
         samples = [WavData(f).get_samples(sample_length) for f in files]
+        samples = [[sample.fft() for sample in example] for example in samples]
         labeled_data[label] = (m[label], sum(samples, []))
 
     return labeled_data

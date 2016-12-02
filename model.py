@@ -18,9 +18,12 @@ class Model(metaclass=ModelMeta):
     """Base model which can train and evaluate accuracy. Variables X and Y are
        vectors of examples, although ultimately this abstraction is handled by
        tensorflow.
+
+       The dataset is passed as it provides the shapes of examples and labels
+       as well as 
     """
 
-    def __init__(*args, **kwargs):
+    def __init__(dataset):
         pass
 
     def train(self, X, Y):
