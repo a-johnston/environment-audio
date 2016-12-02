@@ -4,7 +4,13 @@ from model import *
 from dataset import *
 
 
-def run(model, dataset, iterations=50000, print_every=1000, target_accuracy=None):
+def run(
+    model,
+    dataset,
+    iterations=50000,
+    print_every=1000,
+    target_accuracy=None
+):
     """Trains and evaluates the given model using the given dataset. Prints out
        progress and accuracy at a set interval as well as final accuracy.
     """
@@ -19,7 +25,10 @@ def run(model, dataset, iterations=50000, print_every=1000, target_accuracy=None
 
             print_args = (complete * 100, i, iterations, accuracy * 100)
 
-            print('Training phase %.2f%% complete.\t(%d/%d)\tAccuracy: %6.2f%%' % print_args)
+            print(
+                'Training phase %.2f%% complete.\t(%d/%d)\tAccuracy: %6.2f%%'
+                % print_args
+            )
 
     test_data = dataset.testing()
     accuracy = model.accuracy(test_data[0], test_data[1])
@@ -35,7 +44,7 @@ if __name__ == '__main__':
 
     model = sys.argv[1]
     if model not in Model.models:
-        print('Unknown model ' + model +'.')
+        print('Unknown model ' + model + '.')
         print('Options: ' + ', '.join(Model.models.keys()))
         sys.exit(1)
 

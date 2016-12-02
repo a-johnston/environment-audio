@@ -28,7 +28,7 @@ class Model(metaclass=ModelMeta):
 
     def classify(self, X):
         raise NotImplemented
-    
+
     def accuracy(self, X, Y):
         """Returns accuracy as percentage correctly predicted class labels
         """
@@ -72,10 +72,12 @@ class FFNet(Model):
 class RandomClassifier(Model):
     def __init__(self, dataset):
         self.session = tf.Session()
-        self.labels = np.vstack({tuple(row) for row in dataset.training()[1]})
+        unique_labels = {tuple(row) for row in dataset.training()[1]}
+        self.labels = np.vstack(unique_labels)
 
     def train(self, X, Y):
         pass
 
     def classify(self, X):
-        return self.labels[np.random.randint(self.labels.shape[0], size=len(X)), :]
+        choices = np.random.randint(self.labels.shape[0], size=len(X))
+        return self.labels[choices, :]
