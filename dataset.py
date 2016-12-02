@@ -63,7 +63,8 @@ class Dataset:
     """Object for loading and accessing a specified dataset
     """
 
-    def __init__(self, data_folder='data', split=0.9, sample_length=5.0):
+    @staticmethod
+    def load_wavs(data_folder='data', split=0.9, sample_length=5.0):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 
@@ -71,10 +72,10 @@ class Dataset:
            if provided. If sample_length is None, the WAV files are used as the
            examples.
         """
-        self.data = _load_labeled_data(data_folder, sample_length)
+        data = _load_labeled_data(data_folder, sample_length)
 
-        self.training = []
-        self.testing = []
+        training = []
+        testing = []
 
         for label in self.data:
             random.shuffle(self.data[label])
@@ -85,11 +86,41 @@ class Dataset:
             split1 = l[:math.floor(len(l) * split)]
             split2 = l[math.floor(len(l) * split):]
 
-            self.training += [(x, y) for x in split1]
-            self.testing += [(x, y) for x in split2]
+            training += [(x, y) for x in split1]
+            testing += [(x, y) for x in split2]
 
-    def shuffle(self):
-        random.shuffle(self.training)
+        return Dataset(training, testing)
+
+    @staticmethod
+    def mock(num_per_label=[300, 300], split=0.9):
+        """Generates a mock dataset with the specified number of each label.
+           Each example has a single feature which is its class label.
+        """
+        training = []
+        testing = []
+
+        labels = list(range(len(num_per_label)))
+        m = _map_label_to_one_hot(labels)
+
+        for label in labels:
+            y = m[label]
+            l = [(y, y)] * num_per_label[label]
+
+            training += l[:math.floor(len(l) * split)]
+            testing += l[math.floor(len(l) * split):]
+
+        return Dataset(training, testing)
+
+    def __init__(self, training, testing):
+        self._training = training
+        self._testing = testing
+
+    def training(self):
+        random.shuffle(self._training)
+        return np.array(list(zip(*self._training)))
+
+    def testing(self):
+        return np.array(list(zip(*self._testing)))
 
 
 def _load_labeled_data(data_folder, sample_length):
