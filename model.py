@@ -24,6 +24,9 @@ class Model(metaclass=ModelMeta):
     """
     session = tf.Session()
 
+    x = None
+    y = None
+
     def __init__(dataset):
         pass
 
@@ -35,16 +38,9 @@ class Model(metaclass=ModelMeta):
     def classify(self):
         raise NotImplemented
 
-    @property
-    def _x(self):
-        raise NotImplemented
-
-    @property
-    def _y(self):
-        raise NotImplemented
-
     def train(self, X, Y):
-        self.train_step.run(session=Model.session, feed_dict={self._x: X, self._y: Y})
+        if self.train_step:
+            self.train_step.run(session=Model.session, feed_dict={Model.x: X, Model.y: Y})
 
     def accuracy(self, X, Y):
         """Returns accuracy as percentage correctly predicted class labels
@@ -52,7 +48,7 @@ class Model(metaclass=ModelMeta):
         predicted = tf.equal(tf.argmax(self.classify, 1), tf.argmax(Y, 1))
         accuracy = tf.reduce_mean(tf.cast(predicted, tf.float32))
 
-        return accuracy.eval(session=Model.session, feed_dict={self._x: X, self._y: Y})
+        return accuracy.eval(session=Model.session, feed_dict={Model.x: X, Model.y: Y})
 
 
 def weight_variable(shape):
@@ -84,8 +80,8 @@ class SimpleFFNet(Model):
         x_shape = dataset.x_shape()
         y_shape = dataset.y_shape()
 
-        self.x = tf.placeholder(tf.float32, shape=[None, x_shape])
-        self.y = tf.placeholder(tf.float32, shape=[None, y_shape])
+        Model.x = tf.placeholder(tf.float32, shape=[None, x_shape])
+        Model.y = tf.placeholder(tf.float32, shape=[None, y_shape])
 
         W = weight_variable([x_shape, y_shape])
         b = bias_variable([y_shape])
@@ -93,9 +89,9 @@ class SimpleFFNet(Model):
         W.initializer.run(session=Model.session)
         b.initializer.run(session=Model.session)
 
-        self.predicted_y = tf.matmul(self._x, W) + b
+        self.predicted_y = tf.matmul(Model.x, W) + b
 
-        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.predicted_y, self._y))
+        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.predicted_y, Model.y))
         self._train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 
     @property
@@ -106,26 +102,22 @@ class SimpleFFNet(Model):
     def classify(self):
         return self.predicted_y
 
-    @property
-    def _x(self):
-        return self.x
 
-    @property
-    def _y(self):
-        return self.y
-
-"""
 class RandomClassifier(Model):
     def __init__(self, dataset):
-        unique_labels = {tuple(row) for row in dataset.training()[1]}
-        self.labels = np.vstack(unique_labels)
+        x_shape = dataset.x_shape()
+        y_shape = dataset.y_shape()
+
+        Model.x = tf.placeholder(tf.float32, shape=[None, x_shape])
+        Model.y = tf.placeholder(tf.float32, shape=[None, y_shape])
+
+        self.random = bias_variable([None, y_shape])
 
     @property
     def train_step(self):
-        pass
+        return None
 
     @property
     def classify(self):
-        choices = np.random.randint(self.labels.shape[0], size=len(X))
-        return self.labels[choices, :]
-"""
+        self.random.initializer.run(session=Model.session)
+        return self.random
