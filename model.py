@@ -22,24 +22,37 @@ class Model(metaclass=ModelMeta):
        The dataset is passed as it provides the shapes of examples and labels
        as well as 
     """
+    session = tf.Session()
 
     def __init__(dataset):
         pass
 
-    def train(self, X, Y):
+    @property
+    def train_step(self):
         raise NotImplemented
 
-    def classify(self, X):
+    @property
+    def classify(self):
         raise NotImplemented
+
+    @property
+    def _x(self):
+        raise NotImplemented
+
+    @property
+    def _y(self):
+        raise NotImplemented
+
+    def train(self, X, Y):
+        self.train_step.run(session=Model.session, feed_dict={self._x: X, self._y: Y})
 
     def accuracy(self, X, Y):
         """Returns accuracy as percentage correctly predicted class labels
         """
-        predicted = self.classify(X)
-        comp = (predicted == Y).all(axis=1)
-        num_correct = sum(map(lambda x: 1 if x else 0, comp))
+        predicted = tf.equal(tf.argmax(self.classify, 1), tf.argmax(Y, 1))
+        accuracy = tf.reduce_mean(tf.cast(predicted, tf.float32))
 
-        return num_correct / len(X)
+        return accuracy.eval(session=Model.session, feed_dict={self._x: X, self._y: Y})
 
 
 def weight_variable(shape):
@@ -57,30 +70,62 @@ def bias_variable(shape):
 
 
 class ConvNet(Model):
-    def train(self, X, Y):
+    @property
+    def train_step(self):
         pass
 
-    def classify(self, x):
-        pass
-
-
-class FFNet(Model):
-    def train(self, X, Y):
-        pass
-
-    def classify(self, x):
+    @property
+    def classify(self):
         pass
 
 
+class SimpleFFNet(Model):
+    def __init__(self, dataset):
+        x_shape = dataset.x_shape()
+        y_shape = dataset.y_shape()
+
+        self.x = tf.placeholder(tf.float32, shape=[None, x_shape])
+        self.y = tf.placeholder(tf.float32, shape=[None, y_shape])
+
+        W = weight_variable([x_shape, y_shape])
+        b = bias_variable([y_shape])
+
+        W.initializer.run(session=Model.session)
+        b.initializer.run(session=Model.session)
+
+        self.predicted_y = tf.matmul(self._x, W) + b
+
+        cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.predicted_y, self._y))
+        self._train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+
+    @property
+    def train_step(self):
+        return self._train_step
+
+    @property
+    def classify(self):
+        return self.predicted_y
+
+    @property
+    def _x(self):
+        return self.x
+
+    @property
+    def _y(self):
+        return self.y
+
+"""
 class RandomClassifier(Model):
     def __init__(self, dataset):
-        self.session = tf.Session()
         unique_labels = {tuple(row) for row in dataset.training()[1]}
         self.labels = np.vstack(unique_labels)
 
-    def train(self, X, Y):
+    @property
+    def train_step(self):
         pass
 
-    def classify(self, X):
+    @property
+    def classify(self):
         choices = np.random.randint(self.labels.shape[0], size=len(X))
         return self.labels[choices, :]
+"""

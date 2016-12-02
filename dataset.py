@@ -130,15 +130,15 @@ class Dataset:
 
     def x_shape(self):
         """Returns the shape of an example in this dataset. For example, the
-           test.wav example with 2 second samples has shape (88200,).
+           test.wav example with 2 second samples has shape 88200.
         """
-        return self._training[0][0].shape
+        return self._training[0][0].shape[0]
 
     def y_shape(self):
         """Returns the shape of a label in this dataset. For example, three
-           unique labels mapped to a one-hot vector would yield (3,).
+           unique labels mapped to a one-hot vector would yield 3.
         """
-        return self._training[0][1].shape
+        return self._training[0][1].shape[0]
 
 
 def _load_labeled_data(data_folder, sample_length):
