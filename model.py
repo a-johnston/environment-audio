@@ -111,7 +111,8 @@ class RandomClassifier(Model):
         Model.x = tf.placeholder(tf.float32, shape=[None, x_shape])
         Model.y = tf.placeholder(tf.float32, shape=[None, y_shape])
 
-        self.random = bias_variable([None, y_shape])
+        self.zeros = tf.zeros([x_shape, y_shape])
+        self.random = weight_variable([y_shape])
 
     @property
     def train_step(self):
@@ -120,4 +121,4 @@ class RandomClassifier(Model):
     @property
     def classify(self):
         self.random.initializer.run(session=Model.session)
-        return self.random
+        return tf.matmul(Model.x, self.zeros) + self.random

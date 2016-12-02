@@ -9,7 +9,6 @@ def run(
     dataset,
     iterations=50000,
     print_every=1000,
-    target_accuracy=None
 ):
     """Trains and evaluates the given model using the given dataset. Prints out
        progress and accuracy at a set interval as well as final accuracy.
