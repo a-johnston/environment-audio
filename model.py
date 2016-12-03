@@ -27,8 +27,14 @@ class Model(metaclass=ModelMeta):
     x = None
     y = None
 
-    def __init__(dataset):
-        pass
+    __X__ = None
+    __Y__ = None
+
+    def __init__(self, dataset, *args, **kwargs):
+        Model.x = tf.placeholder(tf.float32, shape=[None, dataset.x_shape()])
+        Model.y = tf.placeholder(tf.float32, shape=[None, dataset.y_shape()])
+        
+        self.build(dataset, *args, **kwargs)
 
     @property
     def train_step(self):
@@ -38,13 +44,25 @@ class Model(metaclass=ModelMeta):
     def classify(self):
         raise NotImplemented
 
+    def build(self, dataset, *args, **kwargs):
+        pass
+
     def train(self, X, Y):
+        """Runs the training step of the model, if provided, with the given
+           labeled examples.
+        """
         if self.train_step:
+            Model.__X__ = X
+            Model.__Y__ = Y
+
             self.train_step.run(session=Model.session, feed_dict={Model.x: X, Model.y: Y})
 
     def accuracy(self, X, Y):
         """Returns accuracy as percentage correctly predicted class labels
         """
+        Model.__X__ = X
+        Model.__Y__ = Y
+
         predicted = tf.equal(tf.argmax(self.classify, 1), tf.argmax(Y, 1))
         accuracy = tf.reduce_mean(tf.cast(predicted, tf.float32))
 
@@ -76,12 +94,9 @@ class ConvNet(Model):
 
 
 class SimpleFFNet(Model):
-    def __init__(self, dataset):
+    def build(self, dataset, *args, **kwargs):
         x_shape = dataset.x_shape()
         y_shape = dataset.y_shape()
-
-        Model.x = tf.placeholder(tf.float32, shape=[None, x_shape])
-        Model.y = tf.placeholder(tf.float32, shape=[None, y_shape])
 
         W = weight_variable([x_shape, y_shape])
         b = bias_variable([y_shape])
@@ -104,21 +119,12 @@ class SimpleFFNet(Model):
 
 
 class RandomClassifier(Model):
-    def __init__(self, dataset):
-        x_shape = dataset.x_shape()
-        y_shape = dataset.y_shape()
-
-        Model.x = tf.placeholder(tf.float32, shape=[None, x_shape])
-        Model.y = tf.placeholder(tf.float32, shape=[None, y_shape])
-
-        self.zeros = tf.zeros([x_shape, y_shape])
-        self.random = weight_variable([y_shape])
-
     @property
     def train_step(self):
         return None
 
     @property
     def classify(self):
-        self.random.initializer.run(session=Model.session)
-        return tf.matmul(Model.x, self.zeros) + self.random
+        random = weight_variable(Model.__Y__.shape)
+        random.initializer.run(session=Model.session)
+        return random
