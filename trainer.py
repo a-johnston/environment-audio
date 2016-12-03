@@ -2,6 +2,7 @@
 import sys
 from model import *
 from dataset import *
+from time import time
 
 
 def run(
@@ -13,6 +14,10 @@ def run(
     """Trains and evaluates the given model using the given dataset. Prints out
        progress and accuracy at a set interval as well as final accuracy.
     """
+    print('Training ' + model.__class__.__name__ + '\n')
+
+    start_time = time()
+
     for i in range(iterations):
         training_data = dataset.training()
         model.train(training_data[0], training_data[1])
@@ -22,17 +27,20 @@ def run(
             test_data = dataset.testing()
             accuracy = model.accuracy(test_data[0], test_data[1])
 
-            print_args = (complete * 100, i, iterations, accuracy * 100)
+            print_args = (complete * 100, i, iterations, accuracy * 100, time() - start_time)
 
             print(
-                'Training phase %.2f%% complete.\t(%d/%d)\tAccuracy: %6.2f%%'
+                'Training phase %.2f%% complete.\t(%d/%d)\tAccuracy: %6.2f%%\tElapsed: %.2fs'
                 % print_args
             )
 
     test_data = dataset.testing()
     accuracy = model.accuracy(test_data[0], test_data[1])
-    print('')
-    print('Training complete.\t\t\t\tAccuracy: %6.2f%%' % (accuracy * 100))
+    print('\n' + '-' * 85)
+    print(
+        'Training complete.\t\t\t\tAccuracy: %6.2f%%\tElapsed %.2fs'
+        % (accuracy * 100, time() - start_time)
+    )
 
 
 if __name__ == '__main__':
