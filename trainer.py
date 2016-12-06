@@ -62,14 +62,12 @@ if __name__ == '__main__':
     args = []
     kwargs = {}
 
-    if len(sys.argv) > 3:
-        start = 3
-        if sys.argv[3].startswith('[') and sys.argv[3].endswith(']'):
-            start = 4
-            args = json.loads(sys.argv[3])
-        for i in range(start, len(sys.argv)):
+    for i in range(3, len(sys.argv)):
+        if '=' in sys.argv[i]:
             key, value = sys.argv[i].split('=')
             kwargs[key] = __try_number(value)
+        else:
+            args.append(json.loads(sys.argv[i]))
 
     model = sys.argv[1]
     if model not in Model.models:

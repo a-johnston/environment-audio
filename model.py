@@ -19,7 +19,8 @@ class Model(metaclass=ModelMeta):
        vectors of examples, although ultimately this abstraction is handled by
        tensorflow.
 
-       The dataset is passed as it provides the shapes of examples and labels.
+       The dataset is passed as it provides the shapes of examples and labels,
+       but model implementations shouldn't be able to see the dataset.
        
        When implementing a new model, overriding the build(...) method will
        allow you to construct your model with the variables x and y
@@ -37,7 +38,15 @@ class Model(metaclass=ModelMeta):
         Model.x = tf.placeholder(tf.float32, shape=[None, dataset.x_shape()])
         Model.y = tf.placeholder(tf.float32, shape=[None, dataset.y_shape()])
         
-        self.build(dataset, *args, **kwargs)
+        self.build(*args, **kwargs)
+
+    @staticmethod
+    def input_shape():
+        return [Model.x.get_shape()[1].value]
+
+    @staticmethod
+    def output_shape():
+        return [Model.y.get_shape()[1].value]
 
     @property
     def train_step(self):
@@ -108,12 +117,15 @@ class ConvNet(Model):
 
 
 class SimpleFFNet(Model):
-    def build(self, dataset, *args, **kwargs):
-        x_shape = dataset.x_shape()
-        y_shape = dataset.y_shape()
+    _act_options = {
+        'sigmoid': tf.sigmoid,
+    }
 
-        W = weight_variable([x_shape, y_shape])
-        b = bias_variable([y_shape])
+    def build(self, hidden_layers=[], activation='sigmoid'):
+        activation = SimpleFFNet._act_options[activation]
+
+        W = weight_variable(Model.input_shape() + Model.output_shape())
+        b = bias_variable(Model.output_shape())
 
         W.initializer.run(session=Model.session)
         b.initializer.run(session=Model.session)
