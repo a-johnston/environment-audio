@@ -19,8 +19,11 @@ class Model(metaclass=ModelMeta):
        vectors of examples, although ultimately this abstraction is handled by
        tensorflow.
 
-       The dataset is passed as it provides the shapes of examples and labels
-       as well as 
+       The dataset is passed as it provides the shapes of examples and labels.
+       
+       When implementing a new model, overriding the build(...) method will
+       allow you to construct your model with the variables x and y
+       consistently defined.
     """
     session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=16))
 
@@ -83,7 +86,18 @@ def bias_variable(shape):
     return tf.Variable(initial)
 
 
+def conv1d(x, W):
+    return tf.nn.conv1d(x, W, stride=1, padding='SAME')
+
+
+def max_pool(x):
+    return tf.nn.max_pool(x, ksize=[1,3,1,1], strides=[1, 3, 0, 1], padding='SAME')
+
+
 class ConvNet(Model):
+    def build(self, dataset, *args, **kwargs):
+        W_conv1 = weight_variable()
+
     @property
     def train_step(self):
         pass
