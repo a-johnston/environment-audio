@@ -124,13 +124,26 @@ class SimpleFFNet(Model):
     def build(self, hidden_layers=[], activation='sigmoid'):
         activation = SimpleFFNet._act_options[activation]
 
-        W = weight_variable(Model.input_shape() + Model.output_shape())
+        last_layer = Model.x
+        last_size = Model.input_shape()[0]
+
+        for size in hidden_layers:
+            W = weight_variable([last_size, size])
+            b = bias_variable([size])
+
+            W.initializer.run(session=Model.session)
+            b.initializer.run(session=Model.session)
+
+            last_layer = activation(tf.matmul(last_layer, W) + b)
+            last_size = size
+
+        W = weight_variable([last_size] + Model.output_shape())
         b = bias_variable(Model.output_shape())
 
         W.initializer.run(session=Model.session)
         b.initializer.run(session=Model.session)
 
-        self.predicted_y = tf.matmul(Model.x, W) + b
+        self.predicted_y = tf.matmul(last_layer, W) + b
 
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.predicted_y, Model.y))
         self._train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
