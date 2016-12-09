@@ -1,2 +1,6 @@
 venv/
 *.wav
+*.zip
+*.swp
+*.pyc
+__pycache__/
