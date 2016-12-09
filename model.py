@@ -19,16 +19,34 @@ class Model(metaclass=ModelMeta):
        vectors of examples, although ultimately this abstraction is handled by
        tensorflow.
 
-       The dataset is passed as it provides the shapes of examples and labels
-       as well as 
+       The dataset is passed as it provides the shapes of examples and labels,
+       but model implementations shouldn't be able to see the dataset.
+       
+       When implementing a new model, overriding the build(...) method will
+       allow you to construct your model with the variables x and y
+       consistently defined.
     """
     session = tf.Session(config=tf.ConfigProto(intra_op_parallelism_threads=16))
 
     x = None
     y = None
 
-    def __init__(dataset):
-        pass
+    __X__ = None
+    __Y__ = None
+
+    def __init__(self, dataset, *args, **kwargs):
+        Model.x = tf.placeholder(tf.float32, shape=[None, dataset.x_shape()])
+        Model.y = tf.placeholder(tf.float32, shape=[None, dataset.y_shape()])
+        
+        self.build(*args, **kwargs)
+
+    @staticmethod
+    def input_shape():
+        return [Model.x.get_shape()[1].value]
+
+    @staticmethod
+    def output_shape():
+        return [Model.y.get_shape()[1].value]
 
     @property
     def train_step(self):
@@ -38,13 +56,25 @@ class Model(metaclass=ModelMeta):
     def classify(self):
         raise NotImplemented
 
+    def build(self, dataset, *args, **kwargs):
+        pass
+
     def train(self, X, Y):
+        """Runs the training step of the model, if provided, with the given
+           labeled examples.
+        """
         if self.train_step:
+            Model.__X__ = X
+            Model.__Y__ = Y
+
             self.train_step.run(session=Model.session, feed_dict={Model.x: X, Model.y: Y})
 
     def accuracy(self, X, Y):
         """Returns accuracy as percentage correctly predicted class labels
         """
+        Model.__X__ = X
+        Model.__Y__ = Y
+
         predicted = tf.equal(tf.argmax(self.classify, 1), tf.argmax(Y, 1))
         accuracy = tf.reduce_mean(tf.cast(predicted, tf.float32))
 
@@ -65,7 +95,18 @@ def bias_variable(shape):
     return tf.Variable(initial)
 
 
+def conv1d(x, W):
+    return tf.nn.conv1d(x, W, stride=1, padding='SAME')
+
+
+def max_pool(x):
+    return tf.nn.max_pool(x, ksize=[1,3,1,1], strides=[1, 3, 0, 1], padding='SAME')
+
+
 class ConvNet(Model):
+    def build(self, dataset, *args, **kwargs):
+        W_conv1 = weight_variable()
+
     @property
     def train_step(self):
         pass
@@ -76,20 +117,33 @@ class ConvNet(Model):
 
 
 class SimpleFFNet(Model):
-    def __init__(self, dataset):
-        x_shape = dataset.x_shape()
-        y_shape = dataset.y_shape()
+    _act_options = {
+        'sigmoid': tf.sigmoid,
+    }
 
-        Model.x = tf.placeholder(tf.float32, shape=[None, x_shape])
-        Model.y = tf.placeholder(tf.float32, shape=[None, y_shape])
+    def build(self, hidden_layers=[], activation='sigmoid'):
+        activation = SimpleFFNet._act_options[activation]
 
-        W = weight_variable([x_shape, y_shape])
-        b = bias_variable([y_shape])
+        last_layer = Model.x
+        last_size = Model.input_shape()[0]
+
+        for size in hidden_layers:
+            W = weight_variable([last_size, size])
+            b = bias_variable([size])
+
+            W.initializer.run(session=Model.session)
+            b.initializer.run(session=Model.session)
+
+            last_layer = activation(tf.matmul(last_layer, W) + b)
+            last_size = size
+
+        W = weight_variable([last_size] + Model.output_shape())
+        b = bias_variable(Model.output_shape())
 
         W.initializer.run(session=Model.session)
         b.initializer.run(session=Model.session)
 
-        self.predicted_y = tf.matmul(Model.x, W) + b
+        self.predicted_y = tf.matmul(last_layer, W) + b
 
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.predicted_y, Model.y))
         self._train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
@@ -104,21 +158,12 @@ class SimpleFFNet(Model):
 
 
 class RandomClassifier(Model):
-    def __init__(self, dataset):
-        x_shape = dataset.x_shape()
-        y_shape = dataset.y_shape()
-
-        Model.x = tf.placeholder(tf.float32, shape=[None, x_shape])
-        Model.y = tf.placeholder(tf.float32, shape=[None, y_shape])
-
-        self.zeros = tf.zeros([x_shape, y_shape])
-        self.random = weight_variable([y_shape])
-
     @property
     def train_step(self):
         return None
 
     @property
     def classify(self):
-        self.random.initializer.run(session=Model.session)
-        return tf.matmul(Model.x, self.zeros) + self.random
+        random = weight_variable(Model.__Y__.shape)
+        random.initializer.run(session=Model.session)
+        return random

@@ -64,7 +64,7 @@ class Dataset:
     """
 
     @staticmethod
-    def load_wavs(data_folder='data', split=0.9, sample_length=5.0):
+    def load_wavs(data_folder='data', split=0.9, sample_length=5.0, cross_validation=5):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 
@@ -75,21 +75,43 @@ class Dataset:
         data = _load_labeled_data(data_folder, sample_length)
 
         training = []
+        if cross_validation <= 1:
+            cross_validation = 1 # aka no cross validation
+        cv_training = [None] * cross_validation
         testing = []
 
         for label in data:
-            y = data[label][0]
-            l = data[label][1]
+            y = data[label][0]  # List[List[int]] # one-hot version of label
+            true_class_label = y
+            l = data[label][1]  # The full array of all examples with this label
+            examples_for_label = l
 
             random.shuffle(l)
 
-            split1 = l[:math.floor(len(l) * split)]
-            split2 = l[math.floor(len(l) * split):]
+            split1 = l[:int(math.floor(len(l) * split))]  # the slice of the array for training
+            split2 = l[int(math.floor(len(l) * split)):]  # the slice of the array for testing
 
             training += [(x, y) for x in split1]
+            # conceptually, training is a list of tuples, where the first value is the fft and the second is the label
+
             testing += [(x, y) for x in split2]
 
-        return Dataset(training, testing)
+        current_cv_set = 0
+        random.shuffle(training)
+        for label_id, item in enumerate(training):
+            one_hot_label = item[1]
+            fft = item[0]
+            if cv_training[current_cv_set] is None:
+                cv_training[current_cv_set] = []
+            cv_training[current_cv_set].append(item) 
+
+            current_cv_set += 1
+            current_cv_set = current_cv_set % len(cv_training)
+
+        print('data preservation:\n%s\n%s\nThese two should be equal' % (training[0][0][0], cv_training[0][0][0][0],))
+        # this means that cv_training is a list of training sets that can be used
+
+        return Dataset(training, testing, cv_training)
 
     @staticmethod
     def mock(num_per_label=[300, 300], split=0.9):
@@ -111,8 +133,13 @@ class Dataset:
 
         return Dataset(training, testing)
 
-    def __init__(self, training, testing):
+    def __init__(self, training, testing, cv_training=None):
         self._training = training
+        if cv_training is None:
+            self._cv_training = training
+        else:
+            self._cv_training = cv_training
+            print('set cv training data')
         self._testing = testing
 
     def training(self):

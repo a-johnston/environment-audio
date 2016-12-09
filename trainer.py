@@ -3,6 +3,7 @@ import sys
 from model import *
 from dataset import *
 from time import time
+import json
 
 
 def run(
@@ -43,22 +44,41 @@ def run(
     )
 
 
+def __try_number(value):
+    try:
+        f = float(value)
+        i = int(f)
+        return i if i == f else f
+    except:
+        return value
+
+
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print('No model specified.')
-        print('Options: ' + ', '.join(Model.models.keys()))
+    if len(sys.argv) < 3:
+        print('Usage: ./trainer.py model data/mock [*args] **kwargs')
+        print('Model options: ' + ', '.join(Model.models.keys()))
         sys.exit(1)
+
+    args = []
+    kwargs = {}
+
+    for i in range(3, len(sys.argv)):
+        if '=' in sys.argv[i]:
+            key, value = sys.argv[i].split('=')
+            kwargs[key] = __try_number(value)
+        else:
+            args.append(json.loads(sys.argv[i]))
 
     model = sys.argv[1]
     if model not in Model.models:
         print('Unknown model ' + model + '.')
-        print('Options: ' + ', '.join(Model.models.keys()))
+        print('Model options: ' + ', '.join(Model.models.keys()))
         sys.exit(1)
 
-    if len(sys.argv) > 2 and sys.argv[2] == 'mock':
+    if sys.argv[2] == 'mock':
         dataset = Dataset.mock()
     else:
-        dataset = Dataset.load_wavs()
-    model = Model.models[model](dataset)
+        dataset = Dataset.load_wavs(sys.argv[2])
+    model = Model.models[model](dataset, *args, **kwargs)
 
     run(model, dataset)
