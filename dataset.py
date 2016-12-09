@@ -53,18 +53,21 @@ class WavData:
 
         return segments
 
-    def fft(self):
+    def fft(self, step_size=1):
         """Computes the FFT for the contained data
         """
-        return fft(self.data)
-
+        step_size = int(step_size)
+        if step_size <= 1:
+            step_size = 1
+        print('fft resolution: %s' % (len(fft(self.data)[::step_size])))
+        return fft(self.data)[::step_size] # python indexing magic
 
 class Dataset:
     """Object for loading and accessing a specified dataset
     """
 
     @staticmethod
-    def load_wavs(data_folder='data', split=0.9, sample_length=5.0, cross_validation=5):
+    def load_wavs(data_folder='data', split=0.9, sample_length=5.0, cross_validation=5, downsampling=1):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 
@@ -72,7 +75,7 @@ class Dataset:
            if provided. If sample_length is None, the WAV files are used as the
            examples.
         """
-        data = _load_labeled_data(data_folder, sample_length)
+        data = _load_labeled_data(data_folder, sample_length, downsampling)
 
         training = []
         if cross_validation <= 1:
@@ -168,7 +171,7 @@ class Dataset:
         return self._training[0][1].shape[0]
 
 
-def _load_labeled_data(data_folder, sample_length):
+def _load_labeled_data(data_folder, sample_length, downsampling=1):
     """Returns a list of labels and examples given a data_folder with the
        structure:
 
@@ -190,7 +193,7 @@ def _load_labeled_data(data_folder, sample_length):
         files = os.listdir(os.path.join(data_folder, label))
         files = [os.path.join(data_folder, label, x) for x in files]
         samples = [WavData(f).get_samples(sample_length) for f in files]
-        samples = [[sample.fft() for sample in example] for example in samples]
+        samples = [[sample.fft(downsampling) for sample in example] for example in samples]
         labeled_data[label] = (m[label], sum(samples, []))
 
     return labeled_data
