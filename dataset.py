@@ -17,6 +17,11 @@ class WavData:
         """
         if filename:
             self.fs, self.data = wavfile.read(filename)
+
+            if self.fs == 96000:
+                self.data = []
+            else:
+                print('Loaded {}'.format(filename))
         else:
             self.fs = fs
             self.data = data
@@ -58,14 +63,14 @@ class WavData:
         """
         step_size = int(step_size) if step_size and step_size > 1 else 1
         data = fft(self.data)[::step_size] # python indexing magic
-        return data[:len(data) // 2].real
+        return np.log(data[:len(data) // 2]).real
 
 class Dataset:
     """Object for loading and accessing a specified dataset
     """
 
     @staticmethod
-    def load_wavs(data_folder='data', split=0.9, sample_length=5.0, cross_validation=5, downsampling=1):
+    def load_wavs(data_folder='data', split=None, sample_length=1.0, cross_validation=5, downsampling=100):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 
@@ -76,7 +81,7 @@ class Dataset:
         data = _load_labeled_data(data_folder, sample_length, downsampling)
 
         training = []
-        testing = []
+        testing = [] if split else None
 
         for label in data:
             y = data[label][0]  # List[List[int]] # one-hot version of label
@@ -85,12 +90,16 @@ class Dataset:
             # Shuffle to deal with changes across longer recordings
             random.shuffle(l)
 
-            split1 = l[:int(math.floor(len(l) * split))]  # training data from this label
-            split2 = l[int(math.floor(len(l) * split)):]  # testing data from this label
+            if split:
+                split1 = l[:int(math.floor(len(l) * split))]  # training data from this label
+                split2 = l[int(math.floor(len(l) * split)):]  # testing data from this label
 
-            # conceptually, these are lists of tuples, where the first value is the fft and the second is the label
-            training += [(x, y) for x in split1]
-            testing += [(x, y) for x in split2]
+                # conceptually, these are lists of tuples, where the first value
+                # is the fft and the second is the label
+                training += [(x, y) for x in split1]
+                testing += [(x, y) for x in split2]
+            else:
+                training += [(x, y) for x in l]
 
         return Dataset(training, testing, cross_validation)
 
@@ -122,6 +131,11 @@ class Dataset:
         self._training = [[] for _ in range(cross_validation)]
         self.i = 0
 
+        if (len(self._raw_training) % cross_validation) != 0:
+            print('WARN: cross validation folds not all equal')
+        if len(self._raw_training) < cross_validation:
+            print('WARN: need more training data')
+
         for i in range(len(training)):
             self._training[i % cross_validation].append(training[i])
 
@@ -135,17 +149,25 @@ class Dataset:
         """Shuffles the training data and returns [[examples], [labels]] where
            examples[i] corresponds to labels[i].
         """
+        self.i = (self.i + 1) % len(self._training)
         data = self._training[self.i]
         random.shuffle(data)
-        self.i = (self.i + 1) % len(self._training)
 
         return self._vstack(data)
 
     def testing(self):
         """Returns the testing data as [[examples], [labels]] where examples[i]
            corresponds to labels[i].
+
+           If the dataset was given k for k-fold cross validation, returns all
+           examples not in the i'th fold.
         """
-        return self._vstack(self._testing)
+        if self._testing:
+            data = self._testing
+        else:
+            data = np.concatenate(self._training[:self.i] + self._training[self.i+1:])
+
+        return self._vstack(data)
 
     def x_shape(self):
         """Returns the shape of an example in this dataset. For example, the
@@ -160,7 +182,7 @@ class Dataset:
         return self._training[0][0][1].shape[0]
 
 
-def _load_labeled_data(data_folder, sample_length, downsampling=1):
+def _load_labeled_data(data_folder, sample_length, downsampling):
     """Returns a list of labels and examples given a data_folder with the
        structure:
 
