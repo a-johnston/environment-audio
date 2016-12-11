@@ -54,10 +54,11 @@ class WavData:
         return segments
 
     def fft(self, step_size=1):
-        """Computes the FFT for the contained data
+        """Computes the FFT for the wav data. Only returns the real component.
         """
         step_size = int(step_size) if step_size and step_size > 1 else 1
-        return fft(self.data)[::step_size] # python indexing magic
+        data = fft(self.data)[::step_size] # python indexing magic
+        return data[:len(data) // 2].real
 
 class Dataset:
     """Object for loading and accessing a specified dataset
@@ -119,23 +120,32 @@ class Dataset:
 
         cross_validation = int(cross_validation) if cross_validation and cross_validation >= 1 else 1
         self._training = [[] for _ in range(cross_validation)]
+        self.i = 0
 
         for i in range(len(training)):
             self._training[i % cross_validation].append(training[i])
+
+    def _vstack(self, data):
+        examples = np.vstack([x[0] for x in data])
+        labels = np.vstack([x[1] for x in data])
+
+        return examples, labels
 
     def training(self):
         """Shuffles the training data and returns [[examples], [labels]] where
            examples[i] corresponds to labels[i].
         """
-        data = random.choice(self._training)
+        data = self._training[self.i]
         random.shuffle(data)
-        return np.array(list(zip(*data)))
+        self.i = (self.i + 1) % len(self._training)
+
+        return self._vstack(data)
 
     def testing(self):
         """Returns the testing data as [[examples], [labels]] where examples[i]
            corresponds to labels[i].
         """
-        return np.array(list(zip(*self._testing)))
+        return self._vstack(self._testing)
 
     def x_shape(self):
         """Returns the shape of an example in this dataset. For example, the
