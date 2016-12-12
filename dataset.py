@@ -169,7 +169,12 @@ class Dataset:
            examples[i] corresponds to labels[i].
         """
         self.i = (self.i + 1) % len(self._training)
-        data = self._training[self.i]
+
+        if self._testing:
+            data = self._training[0]
+        else:
+            data = np.concatenate(self._training[:self.i] + self._training[self.i+1:])
+
         random.shuffle(data)
 
         return self._vstack(data)
@@ -181,10 +186,11 @@ class Dataset:
            If the dataset was given k for k-fold cross validation, returns all
            examples not in the i'th fold.
         """
+        data = self._training[self.i]
         if self._testing:
             data = self._testing
         else:
-            data = np.concatenate(self._training[:self.i] + self._training[self.i+1:])
+            data = self._training[self.i]
 
         return self._vstack(data)
 
