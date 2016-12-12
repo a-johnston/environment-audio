@@ -91,7 +91,7 @@ class Result(object):
         # these are the counts for the total actual values for true and false
         total_true = 0
         total_false = 0
-        for index in xrange(0, len(self.rocPredicted)):
+        for index in range(0, len(self.rocPredicted)):
             predicted = self.rocPredicted[index]
             actual = self.rocActual[index]
             # at what level does the predicted become tp or fp?

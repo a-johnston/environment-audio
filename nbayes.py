@@ -18,22 +18,13 @@ EXCLUDE_THESE = ['class']
 ### Data Processing ###
 
 def convert_to_old_representation(new_data):
-    old_data = []
-
-    print('len(new_data) %s' % len(new_data))
-
     new_fft = new_data[0]
     label = np.argmax(new_data[1])
     schema = list(range(0, len(new_fft)))
     schema.append('CLASS')
     item = list(new_fft)
     item.append(int(label))
-    old_data.append(Datum(item, schema))
-
-    return old_data
-
-
-
+    return Datum(item, schema)
 
 def set_to_buckets(parsed_data, num_buckets, bucket_params=None):
     standard_data = []
@@ -93,17 +84,20 @@ def run_algorithm(
 
     if cross_validation:
         new_folds = dataset._training
-        old_folds = []
+        old_folds = [None] * len(new_folds)
         
-        for new_fold in new_folds:
+        
+        for index, new_fold in enumerate(new_folds):
+            old_folds[index] = []
             # new_fold is a list of tuples of the format (data, label)
             for new_fold_set in new_fold:
-                old_folds.append(convert_to_old_representation(new_fold_set))
+                old_folds[index].append(convert_to_old_representation(new_fold_set))
 
         results_list = []
 
         for test_index, test_fold in enumerate(old_folds):
             num_input_units = 0
+            
             for item in test_fold[0].schema:
                 if item.lower() in EXCLUDE_THESE:
                     continue
