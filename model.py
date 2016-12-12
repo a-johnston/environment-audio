@@ -40,6 +40,12 @@ class Model(metaclass=ModelMeta):
         
         self.build(*args, **kwargs)
 
+        if 'global_variables_initializer' in tf.__dir__():
+            init = tf.global_variables_initializer()
+        else:
+            init = tf.initialize_all_variables()
+        Model.session.run(init)
+
     @staticmethod
     def input_shape():
         return [Model.x.get_shape()[1].value]
@@ -146,7 +152,8 @@ class SimpleFFNet(Model):
         self.predicted_y = tf.matmul(last_layer, W) + b
 
         cross_entropy = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.predicted_y, Model.y))
-        self._train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+        # self._train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
+        self._train_step = tf.train.AdamOptimizer(beta2=0.9).minimize(cross_entropy)
 
     @property
     def train_step(self):

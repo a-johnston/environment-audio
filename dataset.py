@@ -17,6 +17,11 @@ class WavData:
         """
         if filename:
             self.fs, self.data = wavfile.read(filename)
+
+            if self.fs == 96000:
+                self.data = []
+            else:
+                print('Loaded {}'.format(filename))
         else:
             self.fs = fs
             self.data = data
@@ -54,20 +59,18 @@ class WavData:
         return segments
 
     def fft(self, step_size=1):
-        """Computes the FFT for the contained data
+        """Computes the FFT for the wav data. Only returns the real component.
         """
-        step_size = int(step_size)
-        if step_size <= 1:
-            step_size = 1
-        print('fft resolution: %s' % (len(fft(self.data)[::step_size])))
-        return fft(self.data)[::step_size] # python indexing magic
+        step_size = int(step_size) if step_size and step_size > 1 else 1
+        data = fft(self.data)[::step_size] # python indexing magic
+        return np.log(data[:len(data) // 2]).real
 
 class Dataset:
     """Object for loading and accessing a specified dataset
     """
 
     @staticmethod
-    def load_wavs(data_folder='data', split=0.9, sample_length=5.0, cross_validation=5, downsampling=1):
+    def load_wavs(data_folder='data', split=None, sample_length=1.0, cross_validation=5, downsampling=100):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 
@@ -78,43 +81,27 @@ class Dataset:
         data = _load_labeled_data(data_folder, sample_length, downsampling)
 
         training = []
-        if cross_validation <= 1:
-            cross_validation = 1 # aka no cross validation
-        cv_training = [None] * cross_validation
-        testing = []
+        testing = [] if split else None
 
         for label in data:
             y = data[label][0]  # List[List[int]] # one-hot version of label
-            true_class_label = y
             l = data[label][1]  # The full array of all examples with this label
-            examples_for_label = l
 
+            # Shuffle to deal with changes across longer recordings
             random.shuffle(l)
 
-            split1 = l[:int(math.floor(len(l) * split))]  # the slice of the array for training
-            split2 = l[int(math.floor(len(l) * split)):]  # the slice of the array for testing
+            if split:
+                split1 = l[:int(math.floor(len(l) * split))]  # training data from this label
+                split2 = l[int(math.floor(len(l) * split)):]  # testing data from this label
 
-            training += [(x, y) for x in split1]
-            # conceptually, training is a list of tuples, where the first value is the fft and the second is the label
+                # conceptually, these are lists of tuples, where the first value
+                # is the fft and the second is the label
+                training += [(x, y) for x in split1]
+                testing += [(x, y) for x in split2]
+            else:
+                training += [(x, y) for x in l]
 
-            testing += [(x, y) for x in split2]
-
-        current_cv_set = 0
-        random.shuffle(training)
-        for label_id, item in enumerate(training):
-            one_hot_label = item[1]
-            fft = item[0]
-            if cv_training[current_cv_set] is None:
-                cv_training[current_cv_set] = []
-            cv_training[current_cv_set].append(item) 
-
-            current_cv_set += 1
-            current_cv_set = current_cv_set % len(cv_training)
-
-        print('data preservation:\n%s\n%s\nThese two should be equal' % (training[0][0][0], cv_training[0][0][0][0],))
-        # this means that cv_training is a list of training sets that can be used
-
-        return Dataset(training, testing, cv_training)
+        return Dataset(training, testing, cross_validation)
 
     @staticmethod
     def mock(num_per_label=[300, 300], split=0.9):
@@ -136,42 +123,66 @@ class Dataset:
 
         return Dataset(training, testing)
 
-    def __init__(self, training, testing, cv_training=None):
-        self._training = training
-        if cv_training is None:
-            self._cv_training = training
-        else:
-            self._cv_training = cv_training
-            print('set cv training data')
+    def __init__(self, training, testing, cross_validation=None):
+        self._raw_training = training
         self._testing = testing
+
+        cross_validation = int(cross_validation) if cross_validation and cross_validation >= 1 else 1
+        self._training = [[] for _ in range(cross_validation)]
+        self.i = 0
+
+        if (len(self._raw_training) % cross_validation) != 0:
+            print('WARN: cross validation folds not all equal')
+        if len(self._raw_training) < cross_validation:
+            print('WARN: need more training data')
+
+        for i in range(len(training)):
+            self._training[i % cross_validation].append(training[i])
+
+    def _vstack(self, data):
+        examples = np.vstack([x[0] for x in data])
+        labels = np.vstack([x[1] for x in data])
+
+        return examples, labels
 
     def training(self):
         """Shuffles the training data and returns [[examples], [labels]] where
            examples[i] corresponds to labels[i].
         """
-        random.shuffle(self._training)
-        return np.array(list(zip(*self._training)))
+        self.i = (self.i + 1) % len(self._training)
+        data = self._training[self.i]
+        random.shuffle(data)
+
+        return self._vstack(data)
 
     def testing(self):
         """Returns the testing data as [[examples], [labels]] where examples[i]
            corresponds to labels[i].
+
+           If the dataset was given k for k-fold cross validation, returns all
+           examples not in the i'th fold.
         """
-        return np.array(list(zip(*self._testing)))
+        if self._testing:
+            data = self._testing
+        else:
+            data = np.concatenate(self._training[:self.i] + self._training[self.i+1:])
+
+        return self._vstack(data)
 
     def x_shape(self):
         """Returns the shape of an example in this dataset. For example, the
            test.wav example with 2 second samples has shape 88200.
         """
-        return self._training[0][0].shape[0]
+        return self._training[0][0][0].shape[0]
 
     def y_shape(self):
         """Returns the shape of a label in this dataset. For example, three
            unique labels mapped to a one-hot vector would yield 3.
         """
-        return self._training[0][1].shape[0]
+        return self._training[0][0][1].shape[0]
 
 
-def _load_labeled_data(data_folder, sample_length, downsampling=1):
+def _load_labeled_data(data_folder, sample_length, downsampling):
     """Returns a list of labels and examples given a data_folder with the
        structure:
 
