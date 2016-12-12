@@ -204,7 +204,7 @@ class NaiveBayes(object):
                 if category.lower() in EXCLUDE_THESE:
                     continue
                 if item.get(category).type == 'CONTINUOUS':
-                    print('unsupported category (not preprocessed to CONTINUOUS)')
+                    print('unsupported category (not preprocessed from CONTINUOUS to buckets)')
                 else:
                     if isinstance(item.get(category).possible_values, int):
                         self.possible_values[category] = item.get(category).possible_values
