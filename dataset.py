@@ -7,6 +7,18 @@ import random
 import os
 
 
+def _kahan_range(start, stop, step):
+    assert step > 0.0
+    total = start
+    compo = 0.0
+    while total < stop:
+        yield total
+        y = step - compo
+        temp = total + y
+        compo = (temp - total) - y
+        total = temp
+
+
 class WavData:
     """Object for manipulating and analyzing WAV file data
     """
@@ -19,7 +31,8 @@ class WavData:
             self.fs, self.data = wavfile.read(filename)
 
             if self.fs == 96000:
-                self.data = []
+                pass
+                # self.data = []
             else:
                 print('Loaded {}'.format(filename))
         else:
@@ -36,7 +49,7 @@ class WavData:
         """
         return WavData(
             fs=self.fs,
-            data=self.data[math.ceil(start*self.fs):math.floor(end*self.fs)],
+            data=self.data[int(start*self.fs):int(end*self.fs)],
         )
 
     def get_samples(self, sample_duration, include_tail=False):
@@ -58,11 +71,17 @@ class WavData:
 
         return segments
 
-    def fft(self, step_size=1):
+    def fft(self, target_freq=441):
         """Computes the FFT for the wav data. Only returns the real component.
         """
-        step_size = int(step_size) if step_size and step_size > 1 else 1
-        data = fft(self.data)[::step_size] # python indexing magic
+        if target_freq > self.fs:
+            print('WARN: upsampling is unimplemented')
+        data = fft(self.data)
+        if target_freq > 1:
+            target_length = self.duration() * target_freq
+            n = self.fs / target_freq
+            data = [sum(data[int(i):int(i + n)]) / n for i in _kahan_range(0.0, len(data), n)]
+            data = data[:int(target_length)]
         return np.log(data[:len(data) // 2]).real
 
 class Dataset:
@@ -70,7 +89,7 @@ class Dataset:
     """
 
     @staticmethod
-    def load_wavs(data_folder='data', split=None, sample_length=1.0, cross_validation=5, downsampling=100):
+    def load_wavs(data_folder='data', split=None, sample_length=1.0, cross_validation=5):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 
@@ -78,7 +97,7 @@ class Dataset:
            if provided. If sample_length is None, the WAV files are used as the
            examples.
         """
-        data = _load_labeled_data(data_folder, sample_length, downsampling)
+        data = _load_labeled_data(data_folder, sample_length)
 
         training = []
         testing = [] if split else None
@@ -182,7 +201,7 @@ class Dataset:
         return self._training[0][0][1].shape[0]
 
 
-def _load_labeled_data(data_folder, sample_length, downsampling):
+def _load_labeled_data(data_folder, sample_length):
     """Returns a list of labels and examples given a data_folder with the
        structure:
 
@@ -204,7 +223,7 @@ def _load_labeled_data(data_folder, sample_length, downsampling):
         files = os.listdir(os.path.join(data_folder, label))
         files = [os.path.join(data_folder, label, x) for x in files]
         samples = [WavData(f).get_samples(sample_length) for f in files]
-        samples = [[sample.fft(downsampling) for sample in example] for example in samples]
+        samples = [[sample.fft() for sample in example] for example in samples]
         labeled_data[label] = (m[label], sum(samples, []))
 
     return labeled_data
