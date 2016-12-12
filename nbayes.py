@@ -1,6 +1,21 @@
+from bayesImpl import NaiveBayes, Result, Datum, Entry, what_is_my_bucket, EXCLUDE_THESE
+
+import random
+import datetime
+
+from collections import deque
+from random import shuffle
+
+from math import sqrt, floor
+
+### Constants ###
+
+EXCLUDE_THESE = ['class']
+
 ### Data Processing ###
 
 def convert_to_old_representation(new_data):
+    # TODO implement this
     return new_data
 
 def set_to_buckets(parsed_data, buckets_per_continuous):
@@ -36,6 +51,8 @@ def set_to_buckets(parsed_data, buckets_per_continuous):
 
     return standard_data, bucket_params
 
+### Alg Runner ###
+
 def run_algorithm(
     dataset,
     split=0.9,
@@ -44,33 +61,68 @@ def run_algorithm(
     m_estimate=0,
     debug_output=False
     ):
+    sample_length = 1.0
     if num_continuous_buckets <= 2:
         num_continuous_buckets = 2
 
     if debug_output:
         print('Begin parsing data')
-        parsed_data = dataset
+        if cross_validation:
+            dataset = load_wavs(split=None, sample_length=sample_length, cross_validation=5)
+        else:
+            dataset = load_wavs(split=split, sample_length=sample_length)
         print('Done parsing data')
 
-    data, bucket_params = set_to_buckets(parsed_data, num_continuous_buckets)
+    if cross_validation:
+        new_folds = dataset._training
+        old_folds = []
+        for new_fold in new_folds:
+            old_folds.append(convert_to_old_representation(new_fold))
 
-    EXCLUDE_THESE = ['class']
+        for test_fold, test_index in enumerate(old_folds):
 
-    num_input_units = 0
-    for item in data[0].schema:
-        if item.lower() in EXCLUDE_THESE:
-            continue
-        else:
-            num_input_units += 1
+            num_input_units = 0
+            for item in old_training[0].schema:
+                if item.lower() in EXCLUDE_THESE:
+                    continue
+                else:
+                    num_input_units += 1
 
-    if not cross_validation:
+            nab  = NaiveBayes(num_input_units, m_estimate, debug_output)
+
+            for training_fold, training_index in enumerate(old_folds):
+                if test_index == training_index:
+                    continue
+                nab.train(training_fold)
+
+            results_list.append(nab.classify(test_fold))
+
+        total_result = Result().from_(results=results_list)
+        total_result.print_output()
+
+
+
+
+
+
+
+    else: # don't cross validate
+        new_training = dataset._raw_training
+        old_training = convert_to_old_representation(new_training)
+        new_testing = dataset._testing
+        old_testing = convert_to_old_representation(new_testing)
+        data, bucket_params = set_to_buckets(old_training, num_continuous_buckets)
+
+        num_input_units = 0
+        for item in old_training[0].schema:
+            if item.lower() in EXCLUDE_THESE:
+                continue
+            else:
+                num_input_units += 1
+
         if debug_output:
             print('no cross validation')
-        training_data = data._training
-        test_data = data[int(floor(len(data) * split)):]
-
         nab = NaiveBayes(num_input_units, m_estimate, debug_output)
-        nab.train(training_data)
-        result = nab.classify(test_data, bucket_params)
+        nab.train(old_training)
+        result = nab.classify(old_testing, bucket_params)
         result.print_output()
-    else: # cross_validation == True
