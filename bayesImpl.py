@@ -153,18 +153,12 @@ class Datum(object):
         self.__data = {}
         self.schema = set()  # type: Set[str]
         for index, schematic in enumerate(schema):
-            column_name = str(schematic.name)
+            column_name = str(schematic)
             self.schema.update([column_name])
-            column_type = str(schematic.type)
-            column_possible_values = schematic.values
+            column_type = 'CONTINUOUS'
+            column_possible_values = None
             column_index = int(index)
-            column_value = item.features[column_index]
-            if column_type == 'CONTINUOUS':
-                column_value = float(column_value)
-            elif column_value == 'ID':
-                column_value = int(column_value)
-            elif column_value == 'CLASS':
-                column_value = bool(column_value)
+            column_value = float(item[column_index])
             entry = Entry(column_index, column_name, column_type, column_possible_values, column_value)
             self.__data[column_name] = entry
             self.__data[column_index] = entry

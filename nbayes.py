@@ -8,6 +8,8 @@ from random import shuffle
 
 from math import sqrt, floor
 
+import numpy as np
+
 ### Constants ###
 
 EXCLUDE_THESE = ['class']
@@ -15,8 +17,21 @@ EXCLUDE_THESE = ['class']
 ### Data Processing ###
 
 def convert_to_old_representation(new_data):
-    # TODO implement this
-    return new_data
+    old_data = []
+
+    new_data_data = new_data[0]
+    new_data_labels = numpy.argmax(new_data, axis=1)
+    for data_example, label in zip(new_data[0], new_data_labels):
+        schema = list(range(0, len(data_example)))
+        schema.append('CLASS')
+        item = list(data_example)
+        item.append(int(label))
+        old_data.append(Datum(item, schema))
+
+    return old_data
+
+
+
 
 def set_to_buckets(parsed_data, buckets_per_continuous):
     standard_data = []
