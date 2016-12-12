@@ -30,7 +30,7 @@ def run(
             test_data = dataset.testing()
             accuracy = model.accuracy(test_data[0], test_data[1])
 
-            points.append(i, accuracy)
+            points.append((i, accuracy))
 
             print_args = (complete * 100, i, iterations, accuracy * 100, time() - start_time)
 
