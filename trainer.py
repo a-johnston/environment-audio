@@ -9,8 +9,8 @@ import json
 def run(
     model,
     dataset,
-    iterations=50000,
-    print_every=500,
+    iterations=5000,
+    print_every=50,
 ):
     """Trains and evaluates the given model using the given dataset. Prints out
        progress and accuracy at a set interval as well as final accuracy.
@@ -30,7 +30,7 @@ def run(
             test_data = dataset.testing()
             accuracy = model.accuracy(test_data[0], test_data[1])
 
-            points.append((i, accuracy))
+            points.append((i, float(accuracy)))
 
             print_args = (complete * 100, i, iterations, accuracy * 100, time() - start_time)
 
@@ -89,5 +89,5 @@ if __name__ == '__main__':
 
     points = run(model, dataset)
 
-    with open(model + '_out.json', 'w') as out:
+    with open(sys.argv[1] + '_out.json', 'w') as out:
         json.dump(points, out)

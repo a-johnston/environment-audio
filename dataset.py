@@ -106,6 +106,8 @@ class Dataset:
             y = data[label][0]  # List[List[int]] # one-hot version of label
             l = data[label][1]  # The full array of all examples with this label
 
+            print('Loaded {} samples for label {}'.format(len(l), label))
+
             # Shuffle to deal with changes across longer recordings
             random.shuffle(l)
 
