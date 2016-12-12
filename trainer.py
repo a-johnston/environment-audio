@@ -10,7 +10,7 @@ def run(
     model,
     dataset,
     iterations=50000,
-    print_every=1000,
+    print_every=500,
 ):
     """Trains and evaluates the given model using the given dataset. Prints out
        progress and accuracy at a set interval as well as final accuracy.
@@ -18,6 +18,8 @@ def run(
     print('Training ' + model.__class__.__name__ + '\n')
 
     start_time = time()
+
+    points = []
 
     for i in range(iterations):
         training_data = dataset.training()
@@ -27,6 +29,8 @@ def run(
             complete = i / iterations
             test_data = dataset.testing()
             accuracy = model.accuracy(test_data[0], test_data[1])
+
+            points.append(i, accuracy)
 
             print_args = (complete * 100, i, iterations, accuracy * 100, time() - start_time)
 
@@ -42,6 +46,8 @@ def run(
         'Training complete.\t\t\t\tAccuracy: %6.2f%%\tElapsed %.2fs'
         % (accuracy * 100, time() - start_time)
     )
+
+    return points
 
 
 def __try_number(value):
@@ -81,4 +87,7 @@ if __name__ == '__main__':
         dataset = Dataset.load_wavs(sys.argv[2])
     model = Model.models[model](dataset, *args, **kwargs)
 
-    run(model, dataset)
+    points = run(model, dataset)
+
+    with open(model + '_out.json', 'w') as out:
+        json.dump(points, out)
