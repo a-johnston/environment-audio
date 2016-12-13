@@ -102,9 +102,13 @@ def run_algorithm(
                 if test_index == training_index:
                     continue
                 training_fold, bucket_params = set_to_buckets(training_fold, num_buckets)
+                print('trf0 %s' % (training_fold[0].get(1),))
                 nab.train(training_fold)
 
             test_fold, unused_bucket_params = set_to_buckets(test_fold, num_buckets, bucket_params)
+            print('tef0 %s' % (test_fold[0].get(1),))
+            import sys
+            sys.exit(1)
             results_list.append(nab.classify(test_fold, bucket_params))
 
         total_result = Result().from_(results=results_list)
@@ -140,7 +144,7 @@ def run_algorithm(
         return result.accuracy
 
 if __name__ == '__main__':
-    data_folder='datashort'
+    data_folder='data'
     split=0.9
     cross_validation=True
     sample_length = 1.0
@@ -160,7 +164,7 @@ if __name__ == '__main__':
             dataset,
             split=split,
             cross_validation=cross_validation,
-            num_buckets=40+2,
+            num_buckets=10+2,
             m_estimate=2,
             debug_output=1)
 
