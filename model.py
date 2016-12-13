@@ -86,6 +86,12 @@ class Model(metaclass=ModelMeta):
 
         return accuracy.eval(session=Model.session, feed_dict={Model.x: X, Model.y: Y})
 
+    def eval(self, X):
+        Model.__X__ = X
+
+        predicted = tf.reduce_mean(self.classify, 0)
+        return predicted.eval(session=Model.session, feed_dict={Model.x: X})
+
 
 def weight_variable(shape):
     """Creates a weight variable sampled from a normal distribution
