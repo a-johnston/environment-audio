@@ -104,14 +104,13 @@ class Dataset:
         validation = {}
 
         for label in data:
-
-            print('Loaded {} samples for label {}'.format(len(l), label))
-
             if label == 'VALIDATION':
                 validation = data[label]
             else:
                 y = data[label][0]  # List[List[int]] # one-hot version of label
                 l = data[label][1]  # The full array of all examples with this label
+
+                print('Loaded {} samples for label {}'.format(len(l), label))
 
                 # Shuffle to deal with changes across longer recordings
                 random.shuffle(l)
@@ -249,6 +248,7 @@ def _load_labeled_data(data_folder, sample_length):
     for label in label_folders:
         files = os.listdir(os.path.join(data_folder, label))
         files = [os.path.join(data_folder, label, x) for x in files]
+        print('Generating samples and FFT results')
         samples = [(f, WavData(f).get_samples(sample_length)) for f in files]
         samples = [(example[0], [sample.fft() for sample in example[1]]) for example in samples]
         if label == 'VALIDATION':
