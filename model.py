@@ -3,6 +3,12 @@ import numpy as np
 import tensorflow as tf
 
 
+def _one_hot(i, n):
+    l = [0] * n
+    l[i] = 1
+    return l
+
+
 class ModelMeta(type):
     """Metaclass for models used to index loaded models.
     """
@@ -75,6 +81,14 @@ class Model(metaclass=ModelMeta):
 
             self.train_step.run(session=Model.session, feed_dict={Model.x: X, Model.y: Y})
 
+
+    def count_predicted_labels(self, X):
+        Model.__X__ = X
+
+        argmax = tf.argmax(self.classify, 1).eval(session=Model.session, feed_dict={Model.x: X})
+        return np.sum(np.vstack(map(_one_hot, argmax)), 0)
+
+
     def accuracy(self, X, Y):
         """Returns accuracy as percentage correctly predicted class labels
         """
@@ -85,12 +99,6 @@ class Model(metaclass=ModelMeta):
         accuracy = tf.reduce_mean(tf.cast(predicted, tf.float32))
 
         return accuracy.eval(session=Model.session, feed_dict={Model.x: X, Model.y: Y})
-
-    def eval(self, X):
-        Model.__X__ = X
-
-        predicted = tf.reduce_mean(self.classify, 0)
-        return predicted.eval(session=Model.session, feed_dict={Model.x: X})
 
 
 def weight_variable(shape):

@@ -126,7 +126,11 @@ class Dataset:
                 else:
                     training += [(x, y) for x in l]
 
-        return Dataset(training, testing, validation, cross_validation, data)
+        d = {}
+        for label in data:
+            d[label] = (data[label][0], np.vstack(data[label][1]))
+
+        return Dataset(training, testing, validation, cross_validation, d)
 
     @staticmethod
     def mock(num_per_label=[300, 300], split=0.9):
@@ -248,7 +252,7 @@ def _load_labeled_data(data_folder, sample_length):
     for label in label_folders:
         files = os.listdir(os.path.join(data_folder, label))
         files = [os.path.join(data_folder, label, x) for x in files]
-        print('Generating samples and FFT results')
+        print('Generating samples and FFT results for label {}'.format(label))
         samples = [(f, WavData(f).get_samples(sample_length)) for f in files]
         samples = [(example[0], [sample.fft() for sample in example[1]]) for example in samples]
         if label == 'VALIDATION':

@@ -46,11 +46,21 @@ def run(
         % (end_avg * 100, time() - start_time)
     )
 
+    print('\nConfusion over testing/training data')
+
+    data = dataset.confusion()
+
+    for label in data:
+        examples = np.vstack(data[label][1])
+        counts = model.count_predicted_labels(examples)
+        print('{}\t{}'.format(label, '\t'.join(counts)))
+        
+
     print('\nStarting validation phase')
 
     for vdata in dataset.validation():
         print(vdata[0])
-        guess = model.eval(vdata[1])
+        guess = model.count_predicted_labels(vdata[1])
         print(guess)
 
     return points
