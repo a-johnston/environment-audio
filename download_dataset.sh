@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 # Requires gdrive to be set up. If you have access to this download, you will be
 # prompted for an access token.
 

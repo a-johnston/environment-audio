@@ -28,9 +28,11 @@ class WavData:
            frequency and data.
         """
         if filename:
+            self.filename = filename
             self.fs, self.data = wavfile.read(filename)
             print('Loaded {}'.format(filename))
         else:
+            self.filename = None
             self.fs = fs
             self.data = data
 
@@ -47,7 +49,7 @@ class WavData:
             data=self.data[int(start*self.fs):int(end*self.fs)],
         )
 
-    def get_samples(self, sample_duration, increments=0.2, include_tail=False):
+    def get_samples(self, sample_duration, increments=1.0, include_tail=False):
         """Returns a list of sample_duration second slices from this sample. If
            sample_duration is None, [self] is returned.
         """
@@ -60,7 +62,6 @@ class WavData:
         while start + sample_duration <= self.duration():
             segments.append(self.slice(start, start + sample_duration))
             start += increments
-            # start += sample_duration
 
         if include_tail:
             segments.append(self.slice(start, self.duration()))
@@ -87,7 +88,7 @@ class Dataset:
     __cache = None
 
     @staticmethod
-    def load_wavs(data_folder='data', split=None, sample_length=5.0, cross_validation=5):
+    def load_wavs(data_folder='data', split=None, sample_length=1.0, cross_validation=5):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 
@@ -95,33 +96,43 @@ class Dataset:
            if provided. If sample_length is None, the WAV files are used as the
            examples.
         """
-        data = Dataset.__cache or _load_labeled_data(data_folder, sample_length)
-        Dataset.__cache = data
+        data, m = Dataset.__cache or _load_labeled_data(data_folder, sample_length)
+        Dataset.__cache = (data, m)
 
         training = []
         testing = [] if split else None
+        validation = {}
 
         for label in data:
-            y = data[label][0]  # List[List[int]] # one-hot version of label
-            l = data[label][1]  # The full array of all examples with this label
-
-            print('Loaded {} samples for label {}'.format(len(l), label))
-
-            # Shuffle to deal with changes across longer recordings
-            random.shuffle(l)
-
-            if split:
-                split1 = l[:int(math.floor(len(l) * split))]  # training data from this label
-                split2 = l[int(math.floor(len(l) * split)):]  # testing data from this label
-
-                # conceptually, these are lists of tuples, where the first value
-                # is the fft and the second is the label
-                training += [(x, y) for x in split1]
-                testing += [(x, y) for x in split2]
+            if label == 'VALIDATION':
+                validation = data[label]
             else:
-                training += [(x, y) for x in l]
+                y = data[label][0]  # List[List[int]] # one-hot version of label
+                l = data[label][1]  # The full array of all examples with this label
 
-        return Dataset(training, testing, cross_validation)
+                print('Loaded {} samples for label {}'.format(len(l), label))
+
+                # Shuffle to deal with changes across longer recordings
+                random.shuffle(l)
+
+                if split:
+                    split1 = l[:int(math.floor(len(l) * split))]  # training data from this label
+                    split2 = l[int(math.floor(len(l) * split)):]  # testing data from this label
+
+                    # conceptually, these are lists of tuples, where the first value
+                    # is the fft and the second is the label
+                    training += [(x, y) for x in split1]
+                    testing += [(x, y) for x in split2]
+                else:
+                    training += [(x, y) for x in l]
+
+        d = {}
+        for label in data:
+            if label == 'VALIDATION':
+                continue
+            d[label] = (data[label][0], np.vstack(data[label][1]))
+
+        return Dataset(training, testing, validation, cross_validation, d, m)
 
     @staticmethod
     def mock(num_per_label=[300, 300], split=0.9):
@@ -130,6 +141,7 @@ class Dataset:
         """
         training = []
         testing = []
+        validation = {}
 
         labels = list(range(len(num_per_label)))
         m = _map_label_to_one_hot(labels)
@@ -141,20 +153,27 @@ class Dataset:
             training += l[:math.floor(len(l) * split)]
             testing += l[math.floor(len(l) * split):]
 
-        return Dataset(training, testing)
+        return Dataset(training, testing, validation)
 
-    def __init__(self, training, testing, cross_validation=None):
+    def __init__(self, training, testing, validation, cross_validation=None, d={}, m={}):
         self._raw_training = training
         self._testing = testing
+        self._validation = validation or []
 
         cross_validation = int(cross_validation) if cross_validation and cross_validation >= 1 else 1
         self._training = [[] for _ in range(cross_validation)]
         self.i = 0
 
+        # This is the list of examples per each label used for confusion matrix
+        self._d = d
+        self.m = m
+
         if (len(self._raw_training) % cross_validation) != 0:
             print('WARN: cross validation folds not all equal')
         if len(self._raw_training) < cross_validation:
-            print('WARN: need more training data')
+            print('WARN: need more training data. seriously how did this happen?')
+        if len(self._validation) == 0:
+            print('WARN: no validation data provided')
 
         for i in range(len(training)):
             self._training[i % cross_validation].append(training[i])
@@ -195,6 +214,12 @@ class Dataset:
 
         return self._vstack(data)
 
+    def validation(self):
+        return self._validation
+
+    def confusion(self):
+        return self._d
+
     def x_shape(self):
         """Returns the shape of an example in this dataset. For example, the
            test.wav example with 2 second samples has shape 88200.
@@ -229,14 +254,21 @@ def _load_labeled_data(data_folder, sample_length):
     for label in label_folders:
         files = os.listdir(os.path.join(data_folder, label))
         files = [os.path.join(data_folder, label, x) for x in files]
-        samples = [WavData(f).get_samples(sample_length) for f in files]
-        samples = [[sample.fft() for sample in example] for example in samples]
-        labeled_data[label] = (m[label], sum(samples, []))
+        print('Generating samples and FFT results for label {}'.format(label))
+        samples = [(f, WavData(f).get_samples(sample_length)) for f in files]
+        samples = [(example[0], [sample.fft() for sample in example[1]]) for example in samples]
+        if label == 'VALIDATION':
+            labeled_data[label] = [(x[0], np.vstack(x[1])) for x in samples]
+        else:
+            labeled_data[label] = (m[label], sum([x[1] for x in samples], []))
 
-    return labeled_data
+    return labeled_data, m
 
 
 def _map_label_to_one_hot(labels):
+    labels = list(labels)
+    if 'VALIDATION' in labels:
+        labels.remove('VALIDATION')
     m = {}
 
     for i in range(len(labels)):

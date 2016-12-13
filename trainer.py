@@ -35,17 +35,38 @@ def run(
             print_args = (complete * 100, i, iterations, accuracy * 100, time() - start_time)
 
             print(
-                'Training phase %.2f%% complete.\t(%d/%d)\tAccuracy: %6.2f%%\tElapsed: %.2fs'
+                'Training phase %.2f%% complete.\t(%d/%d)\tAccuracy:\t%6.2f%%\tElapsed:\t%.2fs'
                 % print_args
             )
 
-    test_data = dataset.testing()
-    accuracy = model.accuracy(test_data[0], test_data[1])
+    end_avg = sum([x[1] for x in points[-5:]]) / 5
     print('\n' + '-' * 85)
     print(
-        'Training complete.\t\t\t\tAccuracy: %6.2f%%\tElapsed %.2fs'
-        % (accuracy * 100, time() - start_time)
+        'Training complete.\t\tLast 5 Mean Accuracy:\t%6.2f%%\tElapsed %.2fs'
+        % (end_avg * 100, time() - start_time)
     )
+
+    print('\nConfusion over testing/training data')
+
+    data = dataset.confusion()
+
+    labels = list(data.keys())
+    labels.sort(key=lambda x: dataset.m[x].argmax())
+
+    print('\nact\\pred\t' + '\t'.join(labels))
+    print('-' * 70)
+    for label in labels:
+        examples = np.vstack(data[label][1])
+        counts = map(str, model.count_predicted_labels(examples))
+        print('{}\t|\t{}'.format(label, '\t'.join(counts)))
+        
+
+    print('\nStarting validation phase')
+
+    for vdata in dataset.validation():
+        print(vdata[0])
+        guess = model.count_predicted_labels(vdata[1])
+        print(guess)
 
     return points
 
