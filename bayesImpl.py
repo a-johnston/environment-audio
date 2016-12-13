@@ -86,6 +86,7 @@ class Result(object):
         return self
 
     def print_output(self):
+        '''
         tpbins = defaultdict(int)
         fpbins = defaultdict(int)
         # these are the counts for the total actual values for true and false
@@ -131,21 +132,21 @@ class Result(object):
             last_tp = this_tp + 0.0
             fps.append(last_fp)
             tps.append(last_tp)
-
+        '''
         print('Result Report')
         if hasattr(self, 'acc_stdev'):
             print('Accuracy        %3.3f %3.3f' % (self.accuracy, self.acc_stdev,))
         else:
             print('Accuracy:       %3.3f' % (self.accuracy,))
-        if hasattr(self, 'acc_stdev'):
-            print('Precision:      %3.3f %3.3f' % (self.precision, self.pre_stdev,))
-        else:
-            print('Precision:      %3.3f' % (self.precision,))
-        if hasattr(self, 'acc_stdev'):
-            print('Recall:         %3.3f %3.3f' % (self.recall, self.rec_stdev,))
-        else:
-            print('Recall:         %3.3f' % (self.recall,))
-        print('Area Under ROC: %3.3f' % (area_accum,))
+        # if hasattr(self, 'acc_stdev'):
+        #     print('Precision:      %3.3f %3.3f' % (self.precision, self.pre_stdev,))
+        # else:
+        #     print('Precision:      %3.3f' % (self.precision,))
+        # if hasattr(self, 'acc_stdev'):
+        #     print('Recall:         %3.3f %3.3f' % (self.recall, self.rec_stdev,))
+        # else:
+        #     print('Recall:         %3.3f' % (self.recall,))
+        # print('Area Under ROC: %3.3f' % (area_accum,))
         
 class Datum(object):
     def __init__(self, item, schema, *args, **kwargs):
@@ -230,7 +231,7 @@ class NaiveBayes(object):
             return math.log(likelihood)
 
     def likelihood(self, attribute, value, class_):
-        print('likelihood(self, %s, %s, %s)' % (attribute, value, class_,))
+        # print('likelihood(self, %s, %s, %s)' % (attribute, value, class_,))
         num_possible_values = self.possible_values[attribute]
         if num_possible_values == 0.0:
             print('bad attribute %s' % (attribute))

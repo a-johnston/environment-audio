@@ -148,6 +148,8 @@ if __name__ == '__main__':
     accuracy_accum = 0
     accuracy_count = 10
 
+    debug_output = 0
+
     for i in range(0, accuracy_count):
         if cross_validation:
             dataset = Dataset.load_wavs(data_folder=data_folder, split=None, sample_length=sample_length, cross_validation=5)
@@ -160,7 +162,7 @@ if __name__ == '__main__':
             cross_validation=cross_validation,
             num_buckets=40+2,
             m_estimate=2,
-            debug_output=True)
+            debug_output=1)
 
         accuracy_accum += output
 
