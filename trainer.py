@@ -39,12 +39,11 @@ def run(
                 % print_args
             )
 
-    test_data = dataset.testing()
-    accuracy = model.accuracy(test_data[0], test_data[1])
+    end_avg = sum([x[1] for x in points[-5:]]) / 5
     print('\n' + '-' * 85)
     print(
-        'Training complete.\t\t\t\tAccuracy: %6.2f%%\tElapsed %.2fs'
-        % (accuracy * 100, time() - start_time)
+        'Training complete.\t\t\t\tLast 5 Mean Accuracy: %6.2f%%\tElapsed %.2fs'
+        % (end_avg * 100, time() - start_time)
     )
 
     return points
