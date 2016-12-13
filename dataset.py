@@ -84,6 +84,8 @@ class Dataset:
     """Object for loading and accessing a specified dataset
     """
 
+    __cache = None
+
     @staticmethod
     def load_wavs(data_folder='data', split=None, sample_length=5.0, cross_validation=5):
         """Loads the given dataset and performs a training/testing split using
@@ -93,7 +95,8 @@ class Dataset:
            if provided. If sample_length is None, the WAV files are used as the
            examples.
         """
-        data = _load_labeled_data(data_folder, sample_length)
+        data = Dataset.__cache or _load_labeled_data(data_folder, sample_length)
+        Dataset.__cache = data
 
         training = []
         testing = [] if split else None
