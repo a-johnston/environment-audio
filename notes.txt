@@ -1,0 +1,5 @@
+5-class, 10-hidden node NN
+    Converged to accuracy of ~92.5% by end of training
+    Final evalutation spiked to 95.5%, not that that really matters
+
+    overall very happy with first nonbinary classification run

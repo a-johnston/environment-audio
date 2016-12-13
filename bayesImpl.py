@@ -197,11 +197,14 @@ class NaiveBayes(object):
 
     def train(self, fold):
         schema = fold[0].schema
+        print1 = True
+        print2 = True
         for index, item in enumerate(fold):
             class_ = int(item.get('CLASS').value)
             self.cls_count[class_] += 1
             self.total_count += 1
             for category in schema:
+
                 if category.lower() in EXCLUDE_THESE:
                     continue
                 if item.get(category).type == 'CONTINUOUS':
@@ -221,7 +224,10 @@ class NaiveBayes(object):
                 elif item.get(category).type == 'CONTINUOUS':
                     print('unsupported cateogry CONTINUOUS') 
 
+                # print('setting category %s bucket %s for class %s' % (category, value, class_,))
                 self.pxy_cls[class_][category][value] += 1
+
+        # print('total   p0   p1   px|0    px|1')
         
     def log_likelihood(self, attribute, value, class_):
         likelihood = self.likelihood(attribute, value, class_)
@@ -242,7 +248,19 @@ class NaiveBayes(object):
         if (self.cls_count[class_] + self.m) == 0.0:
             print('bad cls_count %s' % (attribute,))
             return 0.0
-        return (self.pxy_cls[class_][attribute][value] + self.m*p) / (self.cls_count[class_] + self.m)
+
+        print('self.pxy_cls[%s][%s] = %s' % (class_, attribute, self.pxy_cls[class_][attribute],))
+        print('self.pxy_cls[%s][%s][%s] = %s' % (class_, attribute, value, self.pxy_cls[class_][attribute][value],))
+        raise Exception()
+        import sys
+        sys.exit(1)
+
+        top = (self.pxy_cls[class_][attribute][value] + self.m*p)
+        bottom = (self.cls_count[class_] + self.m)
+
+        print('likelihood = %s / %s' % (top, bottom,))
+
+        return top / bottom
 
     def positive_likelihood(self, datum, bucket_params):
         accum = 0.0
@@ -273,7 +291,10 @@ class NaiveBayes(object):
             log_likelihood = self.log_likelihood(attribute, datum.get(attribute).value, class_)
             if log_likelihood == -float('inf'):
                 return 0.0
+            print('cls_like accum += log(attr=%s, val=%s, cls=%s) = %s' % (attribute, datum.get(attribute).value, class_, log_likelihood,))
             accum += log_likelihood
+        import sys
+        sys.exit(1)
         return accum
 
     def negative_likelihood(self, datum, bucket_params):
@@ -299,7 +320,7 @@ class NaiveBayes(object):
         fn = 0
         actualValues = []
         predictedValues = []
-        for datum in fold:
+        for index, datum in enumerate(fold):
             # TODO convert this to a non-binary likelihood
             one_hot = []
             for class_ in self.cls_count:
@@ -311,6 +332,9 @@ class NaiveBayes(object):
                     math.log(self.cls_count[class_]) - 
                     math.log(self.total_count)
                     )
+            print('class_likelihood %s\nupdate %s' % 
+                (self.class_likelihood(datum, bucket_params, class_), 
+                    math.log(self.cls_count[class_]) - math.log(self.total_count),))
 
             max_index = 0
             max_value = one_hot[0]
@@ -319,8 +343,9 @@ class NaiveBayes(object):
                     max_index = index
                     max_value = val
             
-            actualValues.append(float(datum.get('CLASS').value))
+            actualValues.append(int(datum.get('CLASS').value))
             predictedValues.append(max_index)
+            print('actual vs. predicted value: %s vs. %s' % (actualValues[-1], predictedValues[-1],))
 
         accuracy = 0.0
         if self.total_count > 0:
