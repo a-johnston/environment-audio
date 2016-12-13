@@ -63,7 +63,7 @@ def set_to_buckets(parsed_data, num_buckets, bucket_params=None):
 ### Alg Runner ###
 
 def run_algorithm(
-    data_folder='data',
+    dataset,
     split=0.9,
     cross_validation=True,
     num_buckets=10,
@@ -73,14 +73,6 @@ def run_algorithm(
     sample_length = 1.0
     if num_buckets <= 2:
         num_buckets = 2
-
-    if debug_output:
-        print('Begin parsing data')
-        if cross_validation:
-            dataset = Dataset.load_wavs(data_folder=data_folder, split=None, sample_length=sample_length, cross_validation=5)
-        else:
-            dataset = Dataset.load_wavs(data_folder=data_folder, split=split, sample_length=sample_length)
-        print('Done parsing data')
 
     if cross_validation:
         new_folds = dataset._training
@@ -117,6 +109,7 @@ def run_algorithm(
 
         total_result = Result().from_(results=results_list)
         total_result.print_output()
+        return total_result.accuracy
 
 
 
@@ -144,12 +137,31 @@ def run_algorithm(
         nab.train(old_training)
         result = nab.classify(old_testing, bucket_params)
         result.print_output()
+        return result.accuracy
 
 if __name__ == '__main__':
-    run_algorithm(
-        data_folder='datashort',
-        split=None,
-        cross_validation=True,
-        num_buckets=10,
-        m_estimate=2,
-        debug_output=True)
+    data_folder='datashort'
+    split=0.9
+    cross_validation=True
+    sample_length = 1.0
+
+    accuracy_accum = 0
+    accuracy_count = 10
+
+    for i in range(0, accuracy_count):
+        if cross_validation:
+            dataset = Dataset.load_wavs(data_folder=data_folder, split=None, sample_length=sample_length, cross_validation=5)
+        else:
+            dataset = Dataset.load_wavs(data_folder=data_folder, split=split, sample_length=sample_length)
+
+        output = run_algorithm(
+            dataset,
+            split=split,
+            cross_validation=cross_validation,
+            num_buckets=40+2,
+            m_estimate=2,
+            debug_output=True)
+
+        accuracy_accum += output
+
+    print('%dx accuracy = %s' % (accuracy_count, (accuracy_accum/float(accuracy_count)),))
