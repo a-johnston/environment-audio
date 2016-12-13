@@ -47,6 +47,13 @@ def run(
         % (accuracy * 100, time() - start_time)
     )
 
+    print('\nStarting validation phase')
+
+    for vdata in dataset.validation():
+        print(vdata[0])
+        guess = model.eval(vdata[1])
+        print(guess)
+
     return points
 
 
