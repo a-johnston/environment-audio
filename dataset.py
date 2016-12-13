@@ -29,12 +29,7 @@ class WavData:
         """
         if filename:
             self.fs, self.data = wavfile.read(filename)
-
-            if self.fs == 96000:
-                pass
-                # self.data = []
-            else:
-                print('Loaded {}'.format(filename))
+            print('Loaded {}'.format(filename))
         else:
             self.fs = fs
             self.data = data
@@ -52,7 +47,7 @@ class WavData:
             data=self.data[int(start*self.fs):int(end*self.fs)],
         )
 
-    def get_samples(self, sample_duration, include_tail=False):
+    def get_samples(self, sample_duration, increments=0.2, include_tail=False):
         """Returns a list of sample_duration second slices from this sample. If
            sample_duration is None, [self] is returned.
         """
@@ -64,7 +59,8 @@ class WavData:
 
         while start + sample_duration <= self.duration():
             segments.append(self.slice(start, start + sample_duration))
-            start += sample_duration
+            start += increments
+            # start += sample_duration
 
         if include_tail:
             segments.append(self.slice(start, self.duration()))
@@ -78,10 +74,10 @@ class WavData:
             print('WARN: upsampling is unimplemented')
         data = fft(self.data)
         if target_freq > 1:
-            target_length = self.duration() * target_freq
+            target_length = int(self.duration() * target_freq + 0.5)
             n = self.fs / target_freq
             data = [sum(data[int(i):int(i + n)]) / n for i in _kahan_range(0.0, len(data), n)]
-            data = data[:int(target_length)]
+            data = data[:target_length]
         return np.log(data[:len(data) // 2]).real
 
 class Dataset:
@@ -91,7 +87,7 @@ class Dataset:
     __cache = None
 
     @staticmethod
-    def load_wavs(data_folder='data', split=None, sample_length=1.0, cross_validation=5):
+    def load_wavs(data_folder='data', split=None, sample_length=5.0, cross_validation=5):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 

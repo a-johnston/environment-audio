@@ -1,6 +1,7 @@
 pip
 numpy>=1.5.0
 scipy
+scikit-learn
 # Install Tensorflow
 #   It might make sense to install from source
 # python3.4
