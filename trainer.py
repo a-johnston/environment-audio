@@ -56,8 +56,9 @@ def run(
     print('\nact\\pred\t' + '\t'.join(labels))
     print('-' * 70)
     for label in labels:
+        n = len(data[label][1])
         examples = np.vstack(data[label][1])
-        counts = map(str, model.count_predicted_labels(examples))
+        counts = map(str, model.count_predicted_labels(examples) / n)
         print('{}\t|\t{}'.format(label, '\t'.join(counts)))
         
 
