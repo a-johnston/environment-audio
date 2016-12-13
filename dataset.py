@@ -127,7 +127,7 @@ class Dataset:
                 else:
                     training += [(x, y) for x in l]
 
-        return Dataset(training, testing, validation, cross_validation)
+        return Dataset(training, testing, validation, cross_validation, data)
 
     @staticmethod
     def mock(num_per_label=[300, 300], split=0.9):
@@ -150,7 +150,7 @@ class Dataset:
 
         return Dataset(training, testing, validation)
 
-    def __init__(self, training, testing, validation, cross_validation=None):
+    def __init__(self, training, testing, validation, cross_validation=None, d={}):
         self._raw_training = training
         self._testing = testing
         self._validation = validation or []
@@ -158,6 +158,10 @@ class Dataset:
         cross_validation = int(cross_validation) if cross_validation and cross_validation >= 1 else 1
         self._training = [[] for _ in range(cross_validation)]
         self.i = 0
+
+        # This is the list of examples per each label used for confusion matrix
+        self._d = dict(d or {})
+        del self._d['VALIDATION']
 
         if (len(self._raw_training) % cross_validation) != 0:
             print('WARN: cross validation folds not all equal')
@@ -207,6 +211,9 @@ class Dataset:
 
     def validation(self):
         return self._validation
+
+    def confusion(self):
+        return self._d
 
     def x_shape(self):
         """Returns the shape of an example in this dataset. For example, the
