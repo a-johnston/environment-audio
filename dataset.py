@@ -88,6 +88,8 @@ class Dataset:
     """Object for loading and accessing a specified dataset
     """
 
+    __cache = None
+
     @staticmethod
     def load_wavs(data_folder='data', split=None, sample_length=1.0, cross_validation=5):
         """Loads the given dataset and performs a training/testing split using
@@ -97,7 +99,8 @@ class Dataset:
            if provided. If sample_length is None, the WAV files are used as the
            examples.
         """
-        data = _load_labeled_data(data_folder, sample_length)
+        data = Dataset.__cache or _load_labeled_data(data_folder, sample_length)
+        Dataset.__cache = data
 
         training = []
         testing = [] if split else None
@@ -105,6 +108,8 @@ class Dataset:
         for label in data:
             y = data[label][0]  # List[List[int]] # one-hot version of label
             l = data[label][1]  # The full array of all examples with this label
+
+            print('Loaded {} samples for label {}'.format(len(l), label))
 
             # Shuffle to deal with changes across longer recordings
             random.shuffle(l)
