@@ -35,14 +35,14 @@ def run(
             print_args = (complete * 100, i, iterations, accuracy * 100, time() - start_time)
 
             print(
-                'Training phase %.2f%% complete.\t(%d/%d)\tAccuracy: %6.2f%%\tElapsed: %.2fs'
+                'Training phase %.2f%% complete.\t(%d/%d)\tAccuracy:\t%6.2f%%\tElapsed:\t%.2fs'
                 % print_args
             )
 
     end_avg = sum([x[1] for x in points[-5:]]) / 5
     print('\n' + '-' * 85)
     print(
-        'Training complete.\t\t\t\tLast 5 Mean Accuracy: %6.2f%%\tElapsed %.2fs'
+        'Training complete.\t\tLast 5 Mean Accuracy:\t%6.2f%%\tElapsed %.2fs'
         % (end_avg * 100, time() - start_time)
     )
 
@@ -50,10 +50,15 @@ def run(
 
     data = dataset.confusion()
 
-    for label in data:
+    labels = list(data.keys())
+    labels.sort(key=lambda x: dataset.m[x].argmax())
+
+    print('\nact\\pred\t' + '\t'.join(labels))
+    print('-' * 70)
+    for label in labels:
         examples = np.vstack(data[label][1])
-        counts = model.count_predicted_labels(examples)
-        print('{}\t{}'.format(label, '\t'.join(counts)))
+        counts = map(str, model.count_predicted_labels(examples))
+        print('{}\t|\t{}'.format(label, '\t'.join(counts)))
         
 
     print('\nStarting validation phase')

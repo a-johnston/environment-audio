@@ -86,7 +86,7 @@ class Model(metaclass=ModelMeta):
         Model.__X__ = X
 
         argmax = tf.argmax(self.classify, 1).eval(session=Model.session, feed_dict={Model.x: X})
-        return np.sum(np.vstack(map(_one_hot, argmax)), 0)
+        return np.sum(np.vstack([_one_hot(x, Model.output_shape()[0]) for x in argmax]), 0)
 
 
     def accuracy(self, X, Y):

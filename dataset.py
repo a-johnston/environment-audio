@@ -49,7 +49,7 @@ class WavData:
             data=self.data[int(start*self.fs):int(end*self.fs)],
         )
 
-    def get_samples(self, sample_duration, increments=0.2, include_tail=False):
+    def get_samples(self, sample_duration, increments=1.0, include_tail=False):
         """Returns a list of sample_duration second slices from this sample. If
            sample_duration is None, [self] is returned.
         """
@@ -96,8 +96,8 @@ class Dataset:
            if provided. If sample_length is None, the WAV files are used as the
            examples.
         """
-        data = Dataset.__cache or _load_labeled_data(data_folder, sample_length)
-        Dataset.__cache = data
+        data, m = Dataset.__cache or _load_labeled_data(data_folder, sample_length)
+        Dataset.__cache = (data, m)
 
         training = []
         testing = [] if split else None
@@ -128,9 +128,11 @@ class Dataset:
 
         d = {}
         for label in data:
+            if label == 'VALIDATION':
+                continue
             d[label] = (data[label][0], np.vstack(data[label][1]))
 
-        return Dataset(training, testing, validation, cross_validation, d)
+        return Dataset(training, testing, validation, cross_validation, d, m)
 
     @staticmethod
     def mock(num_per_label=[300, 300], split=0.9):
@@ -153,7 +155,7 @@ class Dataset:
 
         return Dataset(training, testing, validation)
 
-    def __init__(self, training, testing, validation, cross_validation=None, d={}):
+    def __init__(self, training, testing, validation, cross_validation=None, d={}, m={}):
         self._raw_training = training
         self._testing = testing
         self._validation = validation or []
@@ -163,8 +165,8 @@ class Dataset:
         self.i = 0
 
         # This is the list of examples per each label used for confusion matrix
-        self._d = dict(d or {})
-        del self._d['VALIDATION']
+        self._d = d
+        self.m = m
 
         if (len(self._raw_training) % cross_validation) != 0:
             print('WARN: cross validation folds not all equal')
@@ -260,7 +262,7 @@ def _load_labeled_data(data_folder, sample_length):
         else:
             labeled_data[label] = (m[label], sum([x[1] for x in samples], []))
 
-    return labeled_data
+    return labeled_data, m
 
 
 def _map_label_to_one_hot(labels):

@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 mkdir -p data/{l3,library,tink,thwing}
 mv data/inside/TinkCafeteriaIndoorsOpenSpace* data/tink/
