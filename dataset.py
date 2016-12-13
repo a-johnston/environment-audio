@@ -87,7 +87,7 @@ class Dataset:
     __cache = None
 
     @staticmethod
-    def load_wavs(data_folder='data', split=None, sample_length=5.0, cross_validation=5):
+    def load_wavs(data_folder='data', split=None, sample_length=1.0, cross_validation=5):
         """Loads the given dataset and performs a training/testing split using
            the given percentage of total data.
 
