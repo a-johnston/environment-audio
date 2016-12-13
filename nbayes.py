@@ -107,8 +107,6 @@ def run_algorithm(
 
             test_fold, unused_bucket_params = set_to_buckets(test_fold, num_buckets, bucket_params)
             print('tef0 %s' % (test_fold[0].get(1),))
-            import sys
-            sys.exit(1)
             results_list.append(nab.classify(test_fold, bucket_params))
 
         total_result = Result().from_(results=results_list)
