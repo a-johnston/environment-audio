@@ -6,7 +6,6 @@ import sys
 
 if __name__ == '__main__':
     args = []
-    base = 1472 / (1472 + 639)
     x = []
 
     colors = ['c', 'm', 'b']
@@ -25,7 +24,7 @@ if __name__ == '__main__':
             ]
 
     args += [
-        x, [base] * len(x), 'r--',
+        x, [639 / (639 + 600 + 300 + 180 + 318 + 245)] * len(x), 'r--',
     ]
 
     plt.plot(*args)

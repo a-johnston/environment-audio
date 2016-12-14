@@ -27,7 +27,7 @@ class Model(metaclass=ModelMeta):
 
        The dataset is passed as it provides the shapes of examples and labels,
        but model implementations shouldn't be able to see the dataset.
-       
+
        When implementing a new model, overriding the build(...) method will
        allow you to construct your model with the variables x and y
        consistently defined.
@@ -43,7 +43,7 @@ class Model(metaclass=ModelMeta):
     def __init__(self, dataset, *args, **kwargs):
         Model.x = tf.placeholder(tf.float32, shape=[None, dataset.x_shape()])
         Model.y = tf.placeholder(tf.float32, shape=[None, dataset.y_shape()])
-        
+
         self.build(*args, **kwargs)
 
         if 'global_variables_initializer' in tf.__dir__():
@@ -81,6 +81,10 @@ class Model(metaclass=ModelMeta):
 
             self.train_step.run(session=Model.session, feed_dict={Model.x: X, Model.y: Y})
 
+    def get_predicted_classes(self, X):
+        Model.__X__ = X
+
+        return tf.argmax(self.classify, 1).eval(session=Model.session, feed_dict={Model.x: X})
 
     def count_predicted_labels(self, X):
         Model.__X__ = X
@@ -88,6 +92,21 @@ class Model(metaclass=ModelMeta):
         argmax = tf.argmax(self.classify, 1).eval(session=Model.session, feed_dict={Model.x: X})
         return np.sum(np.vstack([_one_hot(x, Model.output_shape()[0]) for x in argmax]), 0)
 
+    def moving_classification(self, X, n):
+        pred = self.get_predicted_classes(X)
+        print(pred)
+
+        last = []
+        p = []
+
+        for x in pred:
+            last.append(x)
+            if len(last) > n:
+                last = last[-n:]
+            p.append(int(sum(last)/n + 0.5))
+
+        print(p)
+        return [len(list(filter(lambda j: i == j, p))) for i in range(Model.output_shape()[0])]
 
     def accuracy(self, X, Y):
         """Returns accuracy as percentage correctly predicted class labels
@@ -113,27 +132,6 @@ def bias_variable(shape):
     """
     initial = tf.constant(0.1, shape=shape)
     return tf.Variable(initial)
-
-
-def conv1d(x, W):
-    return tf.nn.conv1d(x, W, stride=1, padding='SAME')
-
-
-def max_pool(x):
-    return tf.nn.max_pool(x, ksize=[1,3,1,1], strides=[1, 3, 0, 1], padding='SAME')
-
-
-class ConvNet(Model):
-    def build(self, dataset, *args, **kwargs):
-        W_conv1 = weight_variable()
-
-    @property
-    def train_step(self):
-        pass
-
-    @property
-    def classify(self):
-        pass
 
 
 class SimpleFFNet(Model):

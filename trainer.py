@@ -56,17 +56,24 @@ def run(
     print('\nact\\pred\t' + '\t'.join(labels))
     print('-' * 70)
     for label in labels:
+        n = len(data[label][1])
         examples = np.vstack(data[label][1])
-        counts = map(str, model.count_predicted_labels(examples))
+        counts = map(str, model.count_predicted_labels(examples) / n)
         print('{}\t|\t{}'.format(label, '\t'.join(counts)))
-        
+
 
     print('\nStarting validation phase')
 
     for vdata in dataset.validation():
         print(vdata[0])
+        print('----------')
+        print('raw confidence')
         guess = model.count_predicted_labels(vdata[1])
         print(guess)
+
+        print('\nensemble confidence')
+        print(model.moving_classification(vdata[1], 5))
+        # print(model.get_predicted_classes(vdata[1]))
 
     return points
 
