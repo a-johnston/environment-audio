@@ -26,36 +26,40 @@ def convert_to_old_representation(new_data):
     item.append(int(label))
     return Datum(item, schema)
 
-def set_to_buckets(parsed_data, num_buckets, bucket_params=None):
+def set_to_buckets(parsed_data, num_buckets, bucket_params=None, debug_output=False):
     standard_data = []
     schema = parsed_data[0].schema
     min_data = {}
     max_data = {}
-    if bucket_params is None:
-        for item in parsed_data:
-            for attribute in schema:
-                if attribute.lower() in EXCLUDE_THESE:
-                    continue
-                if item.get(attribute).type == 'CONTINUOUS':
-                    if attribute not in min_data:
-                        min_data[attribute] = item.get(attribute).value
-                    min_data[attribute] = min(min_data[attribute], item.get(attribute).value)
-                    if attribute not in max_data:
-                        max_data[attribute] = item.get(attribute).value
-                    max_data[attribute] = max(max_data[attribute], item.get(attribute).value)
+    for item in parsed_data:
+        for attribute in schema:
+            if attribute.lower() in EXCLUDE_THESE:
+                continue
+            if item.get(attribute).type == 'CONTINUOUS':
+                if attribute not in min_data:
+                    min_data[attribute] = item.get(attribute).value
+                min_data[attribute] = min(min_data[attribute], item.get(attribute).value)
+                if attribute not in max_data:
+                    max_data[attribute] = item.get(attribute).value
+                max_data[attribute] = max(max_data[attribute], item.get(attribute).value)
 
+    if bucket_params is None:
         bucket_params = (num_buckets, min_data, max_data,)
+    
     for item in parsed_data:
         for attribute in min_data:
             bucket = what_is_my_bucket(item.get(attribute).value, attribute, bucket_params)
             old_entry = item.get(attribute)
             item.set(attribute, Entry(old_entry.index, old_entry.name, 'BUCKET CONTINUOUS', num_buckets, bucket))
+            if debug_output and str(attribute) == str(1):
+                print('Set 1 to %s' % (bucket,))
 
         for attribute in item.schema:
             if isinstance(item.get(attribute).value, str):
                 old_entry = item.get(attribute)
                 new_value = old_entry.possible_values.index(old_entry.value)
                 item.set(attribute, Entry(old_entry.index, old_entry.name, 'BUCKET NOMINAL', len(old_entry.possible_values), new_value))
+        
         standard_data.append(item)
 
     return standard_data, bucket_params
@@ -101,13 +105,21 @@ def run_algorithm(
             for training_index, training_fold in enumerate(old_folds):
                 if test_index == training_index:
                     continue
+                # print('begin train bucket')
                 training_fold, bucket_params = set_to_buckets(training_fold, num_buckets)
-                print('trf0 %s' % (training_fold[0].get(1),))
+                # print('end train bucket')
+                # print('trf0 %s' % (training_fold[0].get(1),))
                 nab.train(training_fold)
 
-            test_fold, unused_bucket_params = set_to_buckets(test_fold, num_buckets, bucket_params)
-            print('tef0 %s' % (test_fold[0].get(1),))
-            results_list.append(nab.classify(test_fold, bucket_params))
+            # print('Begin bucketing of test data')
+            test_fold2, unused_bucket_params = set_to_buckets(test_fold, num_buckets, bucket_params)
+            # print('End bucketing of test data')
+            # print(test_fold2[0].get(str(1)).value)
+            # print('tef0 %s' % (test_fold2[0].get(str(1)),))
+            result = nab.classify(test_fold2, bucket_params)
+            result.print_output()
+            results_list.append(result)
+
 
         total_result = Result().from_(results=results_list)
         total_result.print_output()
@@ -162,7 +174,7 @@ if __name__ == '__main__':
             dataset,
             split=split,
             cross_validation=cross_validation,
-            num_buckets=10+2,
+            num_buckets=20+2,
             m_estimate=2,
             debug_output=1)
 

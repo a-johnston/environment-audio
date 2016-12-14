@@ -162,13 +162,13 @@ class Datum(object):
             column_value = float(item[column_index])
             entry = Entry(column_index, column_name, column_type, column_possible_values, column_value)
             self.__data[column_name] = entry
-            self.__data[column_index] = entry
+            # self.__data[column_index] = entry
 
     def get(self, name_or_index):
-        return self.__data[name_or_index]
+        return self.__data[str(name_or_index)]
 
     def set(self, name, value):
-        self.__data[name] = value
+        self.__data[str(name)] = value
     
     def __hash__(self):
         vals = []
@@ -204,6 +204,7 @@ class NaiveBayes(object):
             self.cls_count[class_] += 1
             self.total_count += 1
             for category in schema:
+                category = str(category)
 
                 if category.lower() in EXCLUDE_THESE:
                     continue
@@ -237,34 +238,37 @@ class NaiveBayes(object):
             return math.log(likelihood)
 
     def likelihood(self, attribute, value, class_):
-        # print('likelihood(self, %s, %s, %s)' % (attribute, value, class_,))
+        if not isinstance(value, int):
+            print('type(val) = %s' % (type(value),))
+            print('likelihood(self, %s, %s, %s)' % (attribute, value, class_,))
+            raise Exception()
         num_possible_values = self.possible_values[attribute]
         if num_possible_values == 0.0:
             print('bad attribute %s' % (attribute))
-            import sys
-            sys.exit(1)
+            raise Exception()
         p = 1.0 / num_possible_values
 
         if (self.cls_count[class_] + self.m) == 0.0:
             print('bad cls_count %s' % (attribute,))
             return 0.0
 
-        print('self.pxy_cls[%s][%s] = %s' % (class_, attribute, self.pxy_cls[class_][attribute],))
-        print('self.pxy_cls[%s][%s][%s] = %s' % (class_, attribute, value, self.pxy_cls[class_][attribute][value],))
-        raise Exception()
-        import sys
-        sys.exit(1)
+        # if self.pxy_cls[class_][attribute][value] == 0:
+        #     print('self.pxy_cls[%s][%s] = %s' % (class_, attribute, self.pxy_cls[class_][attribute],))
+        #     print('self.pxy_cls[%s][%s][%s] = %s' % (class_, attribute, value, self.pxy_cls[class_][attribute][value],))
+        #     raise Exception()
+
 
         top = (self.pxy_cls[class_][attribute][value] + self.m*p)
         bottom = (self.cls_count[class_] + self.m)
 
-        print('likelihood = %s / %s' % (top, bottom,))
+        # print('likelihood = %s / %s' % (top, bottom,))
 
         return top / bottom
 
     def positive_likelihood(self, datum, bucket_params):
         accum = 0.0
         for attribute in datum.schema:
+            attribute = str(attribute)
             if attribute.lower() in EXCLUDE_THESE:
                 continue
             value = datum.get(attribute).value
@@ -282,6 +286,7 @@ class NaiveBayes(object):
     def class_likelihood(self, datum, bucket_params, class_):
         accum = 0.0
         for attribute in datum.schema:
+            attribute = str(attribute)
             if attribute.lower() in EXCLUDE_THESE:
                 continue
             value = datum.get(attribute).value
@@ -291,15 +296,15 @@ class NaiveBayes(object):
             log_likelihood = self.log_likelihood(attribute, datum.get(attribute).value, class_)
             if log_likelihood == -float('inf'):
                 return 0.0
-            print('cls_like accum += log(attr=%s, val=%s, cls=%s) = %s' % (attribute, datum.get(attribute).value, class_, log_likelihood,))
+            # if self.debug_output:
+            #     print('cls_like accum += log(attr=%s, val=%s, cls=%s) = %s' % (attribute, datum.get(attribute).value, class_, log_likelihood,))
             accum += log_likelihood
-        import sys
-        sys.exit(1)
         return accum
 
     def negative_likelihood(self, datum, bucket_params):
         accum = 0.0
         for attribute in datum.schema:
+            attribute = str(attribute)
             if attribute.lower() in EXCLUDE_THESE:
                 continue
             value = datum.get(attribute).value
@@ -328,13 +333,13 @@ class NaiveBayes(object):
                 one_hot.append(
                     # log_likelihood(self, attribute, value, class_)
 
-                    self.class_likelihood(datum, bucket_params, class_) + 
+                    (self.class_likelihood(datum, bucket_params, class_) + 
                     math.log(self.cls_count[class_]) - 
-                    math.log(self.total_count)
+                    math.log(self.total_count))
                     )
-            print('class_likelihood %s\nupdate %s' % 
-                (self.class_likelihood(datum, bucket_params, class_), 
-                    math.log(self.cls_count[class_]) - math.log(self.total_count),))
+            # print('class_likelihood %s\nupdate %s' % 
+            #     (self.class_likelihood(datum, bucket_params, class_), 
+            #         math.log(self.cls_count[class_]) - math.log(self.total_count),))
 
             max_index = 0
             max_value = one_hot[0]
@@ -344,14 +349,14 @@ class NaiveBayes(object):
                     max_value = val
             
             actualValues.append(int(datum.get('CLASS').value))
-            predictedValues.append(max_index)
-            print('actual vs. predicted value: %s vs. %s' % (actualValues[-1], predictedValues[-1],))
+            predictedValues.append((len(one_hot) - 1) - max_index)
+            # print('actual vs. predicted value: %s vs. %s' % (actualValues[-1], predictedValues[-1],))
 
         accuracy = 0.0
-        if self.total_count > 0:
+        if len(actualValues) > 0 and len(predictedValues) > 0:
             for actual, predicted in zip(actualValues, predictedValues):
                 if actual == predicted:
                     accuracy += 1
-            accuracy = float(accuracy)/self.total_count
+            accuracy = float(accuracy)/min(len(actualValues), len(predictedValues))
         res = Result(accuracy=accuracy, precision=0.0, recall=0.0, numDataPoints=self.total_count, rocPredicted=[], rocActual=[])
         return res

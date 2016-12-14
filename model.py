@@ -92,6 +92,22 @@ class Model(metaclass=ModelMeta):
         argmax = tf.argmax(self.classify, 1).eval(session=Model.session, feed_dict={Model.x: X})
         return np.sum(np.vstack([_one_hot(x, Model.output_shape()[0]) for x in argmax]), 0)
 
+    def moving_classification(self, X, n):
+        pred = self.get_predicted_classes(X)
+        print(pred)
+
+        last = []
+        p = []
+
+        for x in pred:
+            last.append(x)
+            if len(last) > n:
+                last = last[-n:]
+            p.append(int(sum(last)/n + 0.5))
+
+        print(p)
+        return [len(list(filter(lambda j: i == j, p))) for i in range(Model.output_shape()[0])]
+
     def accuracy(self, X, Y):
         """Returns accuracy as percentage correctly predicted class labels
         """
