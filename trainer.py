@@ -60,7 +60,7 @@ def run(
         examples = np.vstack(data[label][1])
         counts = map(str, model.count_predicted_labels(examples) / n)
         print('{}\t|\t{}'.format(label, '\t'.join(counts)))
-        
+
 
     print('\nStarting validation phase')
 
@@ -68,6 +68,7 @@ def run(
         print(vdata[0])
         guess = model.count_predicted_labels(vdata[1])
         print(guess)
+        print(model.get_predicted_classes(vdata[1]))
 
     return points
 
