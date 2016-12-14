@@ -66,9 +66,14 @@ def run(
 
     for vdata in dataset.validation():
         print(vdata[0])
+        print('----------')
+        print('raw confidence')
         guess = model.count_predicted_labels(vdata[1])
         print(guess)
-        print(model.get_predicted_classes(vdata[1]))
+
+        print('\nensemble confidence')
+        print(model.moving_classification(vdata[1], 5))
+        # print(model.get_predicted_classes(vdata[1]))
 
     return points
 

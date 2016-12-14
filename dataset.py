@@ -49,7 +49,7 @@ class WavData:
             data=self.data[int(start*self.fs):int(end*self.fs)],
         )
 
-    def get_samples(self, sample_duration, increments=1.0, include_tail=False):
+    def get_samples(self, sample_duration, increments=0.1, include_tail=False):
         """Returns a list of sample_duration second slices from this sample. If
            sample_duration is None, [self] is returned.
         """
