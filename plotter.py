@@ -8,19 +8,21 @@ if __name__ == '__main__':
     args = []
     x = []
 
-    colors = ['c', 'm', 'b']
+    colors = ['g', 'c', 'm', 'b']
 
     for f in sys.argv[1:]:
         with open(f) as data:
             points = json.load(data)
             c = colors.pop()
-            max_accuracy = max([p[1] for p in points])
+            end_accuracy = sum([p[1] for p in points[-5:]])/5
+
+            print(c, end_accuracy)
 
             x, y = zip(*points)
 
             args += [
                 x, y, c,
-                x, [max_accuracy] * len(x), c + '--',
+                x, [end_accuracy] * len(x), c + '--',
             ]
 
     args += [
