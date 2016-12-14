@@ -252,12 +252,6 @@ class NaiveBayes(object):
             print('bad cls_count %s' % (attribute,))
             return 0.0
 
-        # if self.pxy_cls[class_][attribute][value] == 0:
-        #     print('self.pxy_cls[%s][%s] = %s' % (class_, attribute, self.pxy_cls[class_][attribute],))
-        #     print('self.pxy_cls[%s][%s][%s] = %s' % (class_, attribute, value, self.pxy_cls[class_][attribute][value],))
-        #     raise Exception()
-
-
         top = (self.pxy_cls[class_][attribute][value] + self.m*p)
         bottom = (self.cls_count[class_] + self.m)
 
@@ -357,6 +351,9 @@ class NaiveBayes(object):
             for actual, predicted in zip(actualValues, predictedValues):
                 if actual == predicted:
                     accuracy += 1
+                else:
+                    print('a: %s p: %s' % (actual, predicted,))
+                    raise Exception()
             accuracy = float(accuracy)/min(len(actualValues), len(predictedValues))
         res = Result(accuracy=accuracy, precision=0.0, recall=0.0, numDataPoints=self.total_count, rocPredicted=[], rocActual=[])
         return res
